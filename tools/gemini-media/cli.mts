@@ -11,6 +11,10 @@
  *   gm voices [--lang en-AU] [--gender female] [--search podcast]
  *   gm doctor                                   checks credentials and both models
  *
+ *   gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Charon   two-host episode: chunked multi-speaker TTS,
+ *                                               blind Argon check + auto retakes, assembled MP3 + report
+ *       [--out dir] [--lexicon file.tsv] [--max-words 130] [--retakes 2] [--only 3,7] [--force] [--assemble] [--tempo 1.05]
+ *
  * Common: --env <file> (default ~/.config/gemini-media/vertex.env, then env vars),
  * --model <id>, --save <file> to keep the answer, --listener "who should listen".
  */
@@ -23,8 +27,9 @@ import {
   DEFAULT_VOICE, LISTEN_MODEL, OUT, TTS_MODEL, client, diffWords, durationOf, ffmpeg, kindOf, loadCreds,
   parseArgs, parseJson, partOf, retry, samplesOf, secondsOf, slug, trim, writeAudio,
 } from "./lib.mts"
+import { dialogue } from "./dialogue.mts"
 
-const FLAGS = ["json", "review", "sheet", "no-trim", "raw", "help", "female", "male"]
+const FLAGS = ["json", "assemble", "force", "review", "sheet", "no-trim", "raw", "help", "female", "male"]
 const args = parseArgs(process.argv.slice(2), FLAGS)
 const [command, ...rest] = args.positional
 const opt = (name: string) => args.options[name]
@@ -319,7 +324,31 @@ async function doctor() {
 
 // ---------------------------------------------------------------- main
 
+async function dialogueCommand() {
+  const [script] = rest
+  if (!script || !opt("voices")) throw new Error("gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Charon")
+  const voices = Object.fromEntries(opt("voices").split(",").map((pair) => pair.split("=").map((s) => s.trim())))
+  await dialogue({
+    ai: gemini,
+    script,
+    voices,
+    out: opt("out") || path.join(OUT, "dialogue", slug(path.basename(script, path.extname(script)))),
+    lexicon: opt("lexicon"),
+    maxWords: Number(opt("max-words") || 130),
+    retakes: Number(opt("retakes") ?? 2),
+    only: opt("only")?.split(",").map(Number),
+    force: flag("force"),
+    assembleOnly: flag("assemble"),
+    gap: Number(opt("gap") || 0.35),
+    sectionGap: Number(opt("section-gap") || 0.9),
+    tempo: Number(opt("tempo") || 1),
+    listener: opt("listener") || "a native Tehrani Persian listener",
+    concurrency: Number(opt("concurrency") || 4),
+  })
+}
+
 const commands: Record<string, () => Promise<unknown>> = {
+  dialogue: dialogueCommand, podcast: dialogueCommand,
   speak, say: speak, tts: speak, review, listen, hear: listen, watch, video: watch, transcribe, ask: askCommand, frames, voices, doctor,
 }
 

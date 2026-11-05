@@ -37,6 +37,8 @@ export interface DialogueOptions {
   retakes: number
   only?: number[]
   force: boolean
+  redoFailed: boolean
+  adopt?: Record<number, string>
   assembleOnly: boolean
   gap: number
   sectionGap: number
@@ -255,7 +257,28 @@ async function listen(ai: GoogleGenAI, turn: Turn, pcm: Buffer, listener: string
   )
 }
 
-function judge(turn: Turn, heard: { heard: string; natural: number; issues: string[] }, pitch: number, expectPitch?: number): Check {
+/** Speech still loud in the last 120 ms means the model stopped mid-word */
+export function abruptEnd(pcm: Buffer) {
+  const n = Math.floor(pcm.length / 2)
+  const rms = (from: number, to: number) => {
+    let sum = 0
+    for (let i = from; i < to; i++) sum += pcm.readInt16LE(i * 2) ** 2
+    return Math.sqrt(sum / Math.max(1, to - from))
+  }
+  const tail = rms(Math.max(0, n - Math.round(RATE * 0.12)), n)
+  const body = rms(0, n)
+  return body > 0 && tail / body > 0.45
+}
+
+/** The script's last word has to be among the last words heard */
+function endsRight(text: string, heard: string) {
+  const last = words(text).map(skeleton).filter(Boolean).at(-1)
+  if (!last) return true
+  const tail = words(heard).slice(-3).map(skeleton).join("")
+  return tail.includes(last)
+}
+
+function judge(turn: Turn, heard: { heard: string; natural: number; issues: string[] }, pitch: number, expectPitch: number | undefined, abrupt: boolean): Check {
   const words_ = lcsDiff(words(turn.text), words(heard.heard))
   const a = [...skeleton(turn.text)]
   const b = [...skeleton(heard.heard)]
@@ -265,12 +288,38 @@ function judge(turn: Turn, heard: { heard: string; natural: number; issues: stri
   // A dropped or added word leaves a run of 3+ consonants; spelling variants leave 1-2
   if (chars.longest >= 4) why.push(`run of ${chars.longest} consonants differs`)
   if (diff > Math.max(3, a.length * 0.12)) why.push(`${diff} of ${a.length} consonants differ`)
+  if (!endsRight(turn.text, heard.heard)) why.push("last word missing or cut")
+  if (abrupt) why.push("audio ends mid-sound (cut off)")
   if (expectPitch && pitch && Math.abs(Math.log2(pitch / expectPitch)) > 0.45) why.push(`pitch ${pitch} Hz vs speaker's usual ${expectPitch} Hz: wrong voice?`)
-  const score = diff + 3 * Math.max(0, chars.longest - 2) + (why.some((w) => w.startsWith("pitch")) ? 50 : 0)
+  const score = diff + 3 * Math.max(0, chars.longest - 2) + (why.some((w) => w.includes("cut")) ? 20 : 0) + (why.some((w) => w.startsWith("pitch")) ? 50 : 0)
   return {
     heard: heard.heard, natural: heard.natural, issues: heard.issues, missing: words_.missing, extra: words_.extra,
     skeletonDiff: diff, longestRun: chars.longest, pitch, score, ok: why.length === 0, why,
   }
+}
+
+/** RMS of the louder (speech) frames only, so pauses and breaths do not count */
+export function speechLevel(pcm: Buffer) {
+  const n = Math.floor(pcm.length / 2)
+  const size = Math.round(RATE * 0.03)
+  const frames: number[] = []
+  for (let s = 0; s + size <= n; s += size) {
+    let sum = 0
+    for (let i = s; i < s + size; i++) sum += pcm.readInt16LE(i * 2) ** 2
+    frames.push(Math.sqrt(sum / size))
+  }
+  if (!frames.length) return 0
+  const peak = Math.max(...frames)
+  const loud = frames.filter((f) => f > peak * 0.2)
+  return Math.sqrt(loud.reduce((a, f) => a + f * f, 0) / loud.length)
+}
+
+function applyGain(pcm: Buffer, db: number) {
+  if (Math.abs(db) < 0.2) return pcm
+  const g = 10 ** (db / 20)
+  const out = Buffer.alloc(pcm.length)
+  for (let i = 0; i < pcm.length / 2; i++) out.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(pcm.readInt16LE(i * 2) * g))), i * 2)
+  return out
 }
 
 // ---------------------------------------------------------------- run
@@ -308,11 +357,40 @@ export async function dialogue(o: DialogueOptions) {
     if (e?.hash === t.hash && e.check?.ok) notePitch(t.speaker, e.check.pitch)
   }
 
+  // Apply the current rules to stored reviews, so a stricter check finds old misses
+  for (const t of turns) {
+    const e = manifest[t.index]
+    if (e?.hash !== t.hash || !e.check || e.check.heard === "(adopted by hand)" || !existsSync(path.join(dir, e.file))) continue
+    const { pcm } = samplesOf(readFileSync(path.join(dir, e.file)))
+    const again = judge(t, { heard: e.check.heard, natural: e.check.natural, issues: e.check.issues }, e.check.pitch, usual(t.speaker), abruptEnd(pcm))
+    if (e.check.ok && !again.ok) console.log(`  turn ${t.index} now fails: ${again.why.join("; ")}`)
+    e.check = again
+  }
+
+  // Hand-picked takes replace a turn's clip (same trimming), recorded as checked by hand
+  for (const [index, file] of Object.entries(o.adopt ?? {})) {
+    const turn = turns[Number(index) - 1]
+    if (!turn) throw new Error(`--adopt: no turn ${index}`)
+    let { pcm, rate } = samplesOf(readFileSync(file))
+    if (rate !== RATE) pcm = samplesOf(await ffmpeg(["-i", file, "-ac", "1", "-ar", String(RATE), "-f", "wav", "-"])).pcm
+    pcm = edge(pcm)
+    const target = `turns/${pad(turn.index)}-${turn.hash}.wav`
+    await writeFile(path.join(dir, target), wav(pcm, RATE))
+    const old = manifest[turn.index]?.check
+    manifest[turn.index] = {
+      hash: turn.hash, file: target, duration: Math.round(secondsOf(pcm, RATE) * 100) / 100, takes: (manifest[turn.index]?.takes ?? 0) + 1,
+      check: { heard: "(adopted by hand)", natural: 0, issues: [`adopted ${path.basename(file)} after a targeted listen`], missing: [], extra: [], skeletonDiff: 0, longestRun: 0, pitch: medianPitch(pcm), score: 0, ok: true, why: [] },
+    }
+    void old
+    console.log(`  turn ${turn.index}: adopted ${path.basename(file)}`)
+  }
+  await save()
+
   const todo = turns.filter((t) => {
     if (o.assembleOnly) return false
     if (o.only) return o.only.includes(t.index)
     const e = manifest[t.index]
-    return o.force || !e || e.hash !== t.hash || !e.check || !existsSync(path.join(dir, e.file))
+    return o.force || !e || e.hash !== t.hash || !e.check || (o.redoFailed && !e.check.ok) || !existsSync(path.join(dir, e.file))
   })
   if (todo.length) console.log(`voicing ${todo.length} turn(s)`)
 
@@ -328,7 +406,7 @@ export async function dialogue(o: DialogueOptions) {
       let result: Check | undefined
       let error: string | undefined
       try {
-        result = judge(turn, await listen(o.ai(), turn, pcm, o.listener), pitch, usual(turn.speaker))
+        result = judge(turn, await listen(o.ai(), turn, pcm, o.listener), pitch, usual(turn.speaker), abruptEnd(pcm))
       } catch (e) {
         error = String((e as Error).message ?? e)
       }
@@ -351,7 +429,7 @@ export async function dialogue(o: DialogueOptions) {
   for (const t of turns) {
     const e = manifest[t.index]
     const ref = usual(t.speaker)
-    if (e?.check && ref && Math.abs(Math.log2(e.check.pitch / ref)) > 0.45 && !e.check.why.some((w) => w.startsWith("pitch"))) {
+    if (e?.check && e.check.heard !== "(adopted by hand)" && ref && Math.abs(Math.log2(e.check.pitch / ref)) > 0.45 && !e.check.why.some((w) => w.startsWith("pitch"))) {
       e.check.why.push(`pitch ${e.check.pitch} Hz vs speaker's usual ${ref} Hz: wrong voice?`)
       e.check.ok = false
     }
@@ -361,6 +439,13 @@ export async function dialogue(o: DialogueOptions) {
   // ------------------------------------------------ assemble
   const unvoiced = turns.filter((t) => manifest[t.index]?.hash !== t.hash)
   if (unvoiced.length) return console.log(`not assembling: turns ${unvoiced.map((t) => t.index).join(", ")} are not voiced for the current script`)
+  // Turns are voiced separately, so their levels drift: match each turn's speech level
+  // to its speaker's median (gain limited to ±6 dB) before the overall loudness pass
+  const clips = turns.map((t) => samplesOf(readFileSync(path.join(dir, manifest[t.index].file))).pcm)
+  const levels = clips.map(speechLevel)
+  const median = (list: number[]) => [...list].sort((a, b) => a - b)[Math.floor(list.length / 2)]
+  const target: Record<string, number> = {}
+  for (const speaker of Object.keys(o.voices)) target[speaker] = median(turns.map((t, i) => (t.speaker === speaker ? levels[i] : NaN)).filter((v) => v > 0))
   const parts: Buffer[] = []
   const chapters: { title: string; at: number }[] = []
   const starts: number[] = []
@@ -377,7 +462,8 @@ export async function dialogue(o: DialogueOptions) {
     }
     if (turn.sectionStart) chapters.push({ title: turn.section, at: at / o.tempo })
     starts.push(at / o.tempo)
-    const { pcm } = samplesOf(readFileSync(path.join(dir, manifest[turn.index].file)))
+    const gainDb = levels[i] > 0 ? Math.max(-6, Math.min(6, 20 * Math.log10(target[turn.speaker] / levels[i]))) : 0
+    const pcm = applyGain(clips[i], gainDb)
     parts.push(pcm)
     at += secondsOf(pcm, RATE)
   }

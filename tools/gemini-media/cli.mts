@@ -13,7 +13,7 @@
  *
  *   gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Orus   multi-host episode, one TTS call per turn,
  *                                               blind Argon + pitch check, auto retakes, assembled MP3 + report
- *       [--out dir] [--lexicon file.tsv] [--retakes 3] [--only 12,40] [--force] [--assemble] [--gap 0.3] [--tempo 1.0]
+ *       [--out dir] [--lexicon file.tsv] [--retakes 3] [--only 12,40] [--force] [--redo-failed] [--adopt 4=take.wav] [--assemble] [--gap 0.3]
  *
  * Common: --env <file> (default ~/.config/gemini-media/vertex.env, then env vars),
  * --model <id>, --save <file> to keep the answer, --listener "who should listen".
@@ -29,7 +29,7 @@ import {
 } from "./lib.mts"
 import { dialogue } from "./dialogue.mts"
 
-const FLAGS = ["json", "assemble", "force", "review", "sheet", "no-trim", "raw", "help", "female", "male"]
+const FLAGS = ["json", "assemble", "force", "redo-failed", "review", "sheet", "no-trim", "raw", "help", "female", "male"]
 const args = parseArgs(process.argv.slice(2), FLAGS)
 const [command, ...rest] = args.positional
 const opt = (name: string) => args.options[name]
@@ -337,9 +337,11 @@ async function dialogueCommand() {
     retakes: Number(opt("retakes") ?? 3),
     only: opt("only")?.split(",").map(Number),
     force: flag("force"),
+    redoFailed: flag("redo-failed"),
+    adopt: opt("adopt") ? Object.fromEntries(opt("adopt").split(",").map((pair) => pair.split("=")).map(([k, v]) => [Number(k), v])) : undefined,
     assembleOnly: flag("assemble"),
     gap: Number(opt("gap") || 0.3),
-    sectionGap: Number(opt("section-gap") || 1.0),
+    sectionGap: Number(opt("section-gap") || 0.8),
     tempo: Number(opt("tempo") || 1),
     listener: opt("listener") || "a native Tehrani Persian listener",
     concurrency: Number(opt("concurrency") || 3),

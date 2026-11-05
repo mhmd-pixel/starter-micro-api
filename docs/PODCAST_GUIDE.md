@@ -7,6 +7,10 @@ deliver a finished, checked MP3. Everything here was done for real on a 100-line
 details behind each step: the traps, the numbers and the edge cases. Read it once
 before your first run.
 
+**Where the code is:** the GitHub repo `mhmd-pixel/starter-micro-api`, branch `ccr-14c9c9d2-1wk7yn`
+(or the default branch, if it has been merged). A session opened on it has everything below ready: the guides are
+in `docs/`, the example in `projects/optocast-astigmatism/`. In the zip version they sit at the root and in `examples/`.
+
 The kit:
 
 | Path | What it is |

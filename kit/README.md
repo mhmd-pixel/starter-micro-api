@@ -3,6 +3,26 @@
 Turn a finished podcast script into a checked, ready-to-publish MP3 with **Gemini TTS** (speech) and
 **Gemini Argon** (listening) on **Vertex AI**. Built and proven on a two-host, 17-minute Persian episode.
 
+## Fastest start: open the repo, not the zip
+
+This kit lives, ready to run, in the GitHub repo **`mhmd-pixel/starter-micro-api`** on branch
+**`ccr-14c9c9d2-1wk7yn`** (if that branch has since been merged, use the default branch).
+A new chat session opened on that repo and branch already has all of it:
+
+| In the repo | In this zip |
+|---|---|
+| `bin/gm`, `bin/qc-episode.sh`, `tools/gemini-media/` | same |
+| `docs/PODCAST_GUIDE.md`, `docs/LESSONS.md` | `PODCAST_GUIDE.md`, `LESSONS.md` (at the root) |
+| `projects/optocast-astigmatism/` (script, lexicon, chapters, report) | `examples/optocast-astigmatism/` |
+| `.claude/skills/gemini-media/SKILL.md`: Claude Code loads it automatically | same |
+| `scripts/build-kit.sh`: rebuilds this zip | not included |
+| `deliverables/`: the finished episode MP3 and this zip | not included |
+
+In the repo, put each new episode in `projects/<name>/` (script.txt, lexicon.tsv) and render to `out/<name>/`
+(gitignored). Commit the script, lexicon, chapters and report; send the MP3 to the user rather than committing it,
+unless they ask for it in `deliverables/`. Credentials are never in the repo: ask the user for them (below).
+Work on the branch the session was given; don't push to another branch without asking.
+
 **If you're an agent picking this up:**
 
 1. **Ask the user for the four credentials** before anything else: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLIENT_EMAIL`,

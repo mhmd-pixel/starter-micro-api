@@ -1,0 +1,7 @@
+node_modules/
+out/
+# credentials never live in the repo
+*.env
+.env*
+*service-account*.json
+*-key.json

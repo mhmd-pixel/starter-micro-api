@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# gemini-media wrapper: `bin/gm speak "hello"`, `bin/gm watch clip.mp4`, `bin/gm --help`
+set -e
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ ! -x "$here/node_modules/.bin/tsx" ]; then
+  echo "gm: installing dependencies (first run in this container)…" >&2
+  (cd "$here" && npm ci --silent --no-audit --no-fund >&2)
+fi
+exec "$here/node_modules/.bin/tsx" "$here/tools/gemini-media/cli.mts" "$@"

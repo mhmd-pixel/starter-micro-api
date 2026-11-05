@@ -1,0 +1,6 @@
+<resources>
+    <color name="brand_primary">#5CC3E0</color>
+    <color name="surface">#121417</color>
+    <color name="on_surface">#E6E9EC</color>
+    <color name="on_surface_muted">#9AA4AE</color>
+</resources>

@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Optoflow</string>
+    <string name="offline_title">Can\'t reach Optoflow</string>
+    <string name="offline_body">Check your internet connection. We\'ll reconnect automatically.</string>
+    <string name="retry">Try again</string>
+    <string name="choose_file">Choose a file</string>
+    <string name="download_started">Downloading %1$s…</string>
+    <string name="download_saved">Saved %1$s to Downloads</string>
+    <string name="download_failed">Couldn\'t save the file</string>
+    <string name="no_app_for_link">No app can open this link</string>
+</resources>

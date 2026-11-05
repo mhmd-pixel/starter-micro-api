@@ -1,0 +1,7 @@
+<resources>
+    <!-- Placeholder brand colours; replace with Optoflow's. -->
+    <color name="brand_primary">#0E6E8C</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#1B1F23</color>
+    <color name="on_surface_muted">#5A6470</color>
+</resources>

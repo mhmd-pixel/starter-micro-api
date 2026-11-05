@@ -2,7 +2,7 @@
  * gemini-media: speech generation, listening and watching through Gemini on Vertex AI.
  *
  *   gm speak "text" [--voice en-au-tutor-4] [--out out/x.mp3] [--takes 3] [--review] [--lang en-AU] [--file script.txt]
- *   gm review <audio> --text "intended words"   blind transcription + word diff + delivery notes (JSON)
+ *   gm review <audio> --text "intended words"   blind transcription + Persian-aware diff + cut-off/pitch checks
  *   gm listen <audio> ["question"]              any audio: music, speech, a mix (add --json for JSON)
  *   gm watch <video|YouTube URL> ["question"]   video with its sound; --start/--end to cut
  *   gm transcribe <audio|video>                 transcript with rough timestamps and speakers
@@ -24,18 +24,19 @@ import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { Modality, type Part } from "@google/genai"
 import {
-  DEFAULT_VOICE, LISTEN_MODEL, OUT, TTS_MODEL, client, diffWords, durationOf, ffmpeg, kindOf, loadCreds,
+  DEFAULT_VOICE, LISTEN_MODEL, OUT, TTS_MODEL, client, durationOf, ffmpeg, kindOf, loadCreds,
   parseArgs, parseJson, partOf, retry, samplesOf, secondsOf, slug, trim, writeAudio,
 } from "./lib.mts"
 import { dialogue } from "./dialogue.mts"
+import { RATE, abruptEnd, compareText, medianPitch, stripTags } from "./speech.mts"
 
-const FLAGS = ["json", "assemble", "force", "redo-failed", "review", "sheet", "no-trim", "raw", "help", "female", "male"]
+const FLAGS = ["json", "assemble", "force", "redo-failed", "keep-tags", "review", "sheet", "no-trim", "raw", "help", "female", "male"]
 const args = parseArgs(process.argv.slice(2), FLAGS)
 const [command, ...rest] = args.positional
 const opt = (name: string) => args.options[name]
 const flag = (name: string) => args.flags.has(name)
 const clip = { start: opt("start") ? Number(opt("start")) : undefined, end: opt("end") ? Number(opt("end")) : undefined }
-const LISTENER = opt("listener") || "a native Australian English listener"
+const LISTENER = opt("listener") || "a native speaker of the language spoken, with a trained ear"
 const rel = (file: string) => {
   const relative = path.relative(process.cwd(), path.resolve(file))
   return relative.startsWith("..") ? path.resolve(file) : relative || file
@@ -109,8 +110,10 @@ async function synthesize(text: string, voice: string) {
 }
 
 async function speak() {
-  const text = opt("file") ? readFileSync(opt("file"), "utf8").trim() : rest.join(" ").trim()
-  if (!text) throw new Error('Nothing to say: gm speak "text" or --file script.txt')
+  const raw = opt("file") ? readFileSync(opt("file"), "utf8").trim() : rest.join(" ").trim()
+  if (!raw) throw new Error('Nothing to say: gm speak "text" or --file script.txt')
+  // [laughing], [sigh]… are performed but tend to sound acted, so they are dropped unless --keep-tags
+  const text = flag("keep-tags") ? raw : stripTags(raw)
   const voice = opt("voice") || DEFAULT_VOICE
   const takes = Math.max(1, Number(opt("takes") || 1))
   const hash = createHash("sha1").update(`${TTS_MODEL}|${voice}|${text}`).digest("hex").slice(0, 8)
@@ -126,10 +129,13 @@ async function speak() {
   for (const result of results) console.log(`${rel(result.file)} · ${result.seconds}s · ${voice}`)
   if (flag("review")) {
     console.log("")
-    for (const result of results) {
-      const verdict = await reviewSpeech(result.file, text).catch((error) => ({ error: String(error.message ?? error) }))
-      console.log(`${path.basename(result.file)}: ${summary(verdict)}`)
-    }
+    const reviewed = await Promise.all(
+      results.map(async (result) => ({ result, verdict: await reviewSpeech(result.file, text).catch((error) => ({ error: String(error.message ?? error) })) })),
+    )
+    // Best first: passing takes, then fewest differences, then the listener's naturalness
+    const rank = (v: (typeof reviewed)[number]["verdict"]) => ("error" in v ? 1e6 : (v.verdict === "ok" ? 0 : 1000) + v.skeletonDiff * 10 - v.natural)
+    reviewed.sort((a, b) => rank(a.verdict) - rank(b.verdict))
+    for (const { result, verdict } of reviewed) console.log(`${path.basename(result.file)}: ${summary(verdict)}`)
   }
 }
 
@@ -138,24 +144,24 @@ async function speak() {
 interface Heard {
   heard: string
   natural: number
-  energy: number
   issues: string[]
   accent?: string
 }
 
 /**
- * The listener is suggestible, so it transcribes without seeing the script,
- * and the words are compared here. Delivery notes come from the same blind pass.
+ * The listener is suggestible, so it transcribes without seeing the script, and the
+ * words are compared here (Persian-aware: colloquial spelling variants pass). The clip
+ * itself is checked for a cut-off ending, and its median pitch is reported.
  */
 async function reviewSpeech(file: string, intended: string) {
   const parts = await mediaParts([file])
   const context = opt("context") ? ` Context: ${opt("context")}.` : ""
   const prompt =
-    `You are ${LISTENER}, checking a voice-over clip before it goes into an ad.${context} ` +
-    "Listen carefully. Do not assume or guess words: write exactly what is said, including slips, repeated or half-said words. " +
-    'Answer only with JSON: {"heard": exact transcription, "natural": 1-10, "energy": 1-10 for an upbeat read, ' +
-    '"accent": short description of the accent, ' +
-    '"issues": [specific problems: mispronounced words (quote the word), wrong stress, clipped or cut-off endings, glitches, clicks, static, robotic artefacts, odd pauses or pacing; empty if none]}'
+    `You are ${LISTENER}, checking one recorded line before release.${context} ` +
+    "Transcribe exactly what is said, in the script of the language spoken, as spoken (colloquial forms as heard). Write numbers as words. " +
+    "Do not assume, tidy or guess words: include slips, repeats, half-said or cut-off words. " +
+    'Answer only with JSON: {"heard": exact transcription, "natural": 1-10, "accent": short description of the accent, ' +
+    '"issues": [specific problems: mispronounced words (quote the word), wrong stress, a cut-off ending, glitches, clicks, static, robotic artefacts, odd pauses, a laugh that sounds fake; empty if none]}'
   const result = await retry(
     async () => {
       const heard = parseJson<Heard>(await ask(prompt, parts, true))
@@ -165,15 +171,19 @@ async function reviewSpeech(file: string, intended: string) {
     4,
     "review",
   )
-  const diff = diffWords(intended, result.heard)
-  return { file: rel(file), intended, ...result, ...diff, verdict: diff.matches && result.issues.length === 0 ? "ok" : "check" }
+  const pcm = samplesOf(await ffmpeg(["-i", file, "-ac", "1", "-ar", String(RATE), "-f", "wav", "-"])).pcm
+  const compared = compareText(stripTags(intended), result.heard)
+  const why = [...compared.why, ...(abruptEnd(pcm) ? ["audio ends mid-sound (cut off)"] : [])]
+  return { file: rel(file), intended, ...result, ...compared, why, pitch: medianPitch(pcm), verdict: why.length === 0 ? "ok" : "check" }
 }
 
 function summary(r: Awaited<ReturnType<typeof reviewSpeech>> | { error: string }) {
   if ("error" in r) return `no usable review (${r.error})`
-  const lines = [`${r.verdict.toUpperCase()} · natural ${r.natural}/10 · energy ${r.energy}/10 · heard: ${r.heard}`]
-  if (r.missing.length) lines.push(`    missing: ${r.missing.join(" ")}`)
-  if (r.extra.length) lines.push(`    extra:   ${r.extra.join(" ")}`)
+  const lines = [`${r.verdict.toUpperCase()} · natural ${r.natural}/10 · pitch ${r.pitch} Hz · heard: ${r.heard}`]
+  for (const reason of r.why) lines.push(`    ✗ ${reason}`)
+  // Word lists are noisy (spacing, clitics); show them only when the skeleton check failed
+  if (r.why.length && r.missing.length) lines.push(`    missing: ${r.missing.join(" ")}`)
+  if (r.why.length && r.extra.length) lines.push(`    extra:   ${r.extra.join(" ")}`)
   for (const issue of r.issues) lines.push(`    - ${issue}`)
   return lines.join("\n")
 }
@@ -337,6 +347,7 @@ async function dialogueCommand() {
     retakes: Number(opt("retakes") ?? 3),
     only: opt("only")?.split(",").map(Number),
     force: flag("force"),
+    keepTags: flag("keep-tags"),
     redoFailed: flag("redo-failed"),
     adopt: opt("adopt") ? Object.fromEntries(opt("adopt").split(",").map((pair) => pair.split("=")).map(([k, v]) => [Number(k), v])) : undefined,
     assembleOnly: flag("assemble"),

@@ -30,7 +30,7 @@ settings, and never to paste the key into chat.
 |---|---|
 | Make speech | `bin/gm speak "text" [--voice en-au-tutor-4] [--out out/vo/line.mp3] [--takes 3] [--review]` |
 | Script from file | `bin/gm speak --file script.txt --out out/vo/intro.wav` |
-| Check a clip against its script | `bin/gm review clip.mp3 --text "intended words" [--json] [--context "furniture ad"]` |
+| Check a clip against its script | `bin/gm review clip.mp3 --text "intended words" [--json]` (blind, Persian-aware, cut-off + pitch) |
 | Listen to anything | `bin/gm listen song.mp3 ["question"]` |
 | Watch a video | `bin/gm watch reel.mp4 ["question"] [--start 10 --end 25]` (also YouTube / `gs://` URLs) |
 | Transcript | `bin/gm transcribe file.(mp3\|mp4)` |
@@ -62,27 +62,19 @@ Output goes to `out/` (gitignored) unless `--out` says otherwise; `.mp3` or `.wa
 - For a full ad mix: `bin/gm listen reel.mp4 "As a mixing engineer: is the VO intelligible over the music? ..."`.
   Apply only fixes that are safe either way.
 
-## Multi-host episodes (`bin/gm dialogue`)
+## Podcasts and multi-host scripts (`bin/gm dialogue`)
 
-`bin/gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Orus --lexicon lexicon.tsv --out out/<name>`
+Read `docs/PODCAST_GUIDE.md` (the step-by-step) and `docs/LESSONS.md` (the traps and numbers) before voicing an episode.
+In short:
 
-- Script: `Name: text` per line; `# Section` lines become chapters. The lexicon is `written<TAB>spoken`
-  and is applied to the speech only.
-- **One TTS call per turn** in that speaker's voice, 6 at a time. Each take gets a blind Argon transcription,
-  compared on a consonant skeleton: spelling variants like «سیلندرو/سیلندر رو» and «یه کم/یکم» pass, while dropped
-  or added words fail. Each take also gets a pitch check against that speaker's other turns. Failing turns are
-  retaken (up to `--retakes`, default 3) and the best is kept. Turns are stitched with varied
-  0.3–0.42 s gaps (shorter after a question, 1.0 s between sections), normalised to −16 LUFS.
-  Outputs: `episode.mp3`, `report.md` (per-turn verdicts, timestamps), `chapters.txt`, `turns.json`.
-  A re-run re-voices only changed turns; `--only 12,40` redoes specific ones.
-- Learned the hard way (Nov 2026):
-  - **Multi-speaker mode can't keep voices on speakers.** The first configured voice goes to whoever
-    speaks first, whatever the labels say (16/16 takes). Real names as labels are also read aloud ("سارا، کیس اول…"),
-    and a "TTS the following conversation…" preamble is read aloud too. Hence one call per turn.
-  - **Don't set `languageCode: fa-IR`.** It invented extra lines. Without it, the Persian is native Tehrani.
-  - `[laughing]`, `[sigh]` at the start of a line are performed, not read.
-  - About 1 take in 3 drops or adds a word somewhere, so always run the blind check.
-  - No fa-IR prebuilt voices exist. Argon rated Sulafat (F) + Orus (M) best for a senior woman and a younger man.
-    Charon and Iapetus sound older and deeper.
-  - Argon's voice-gender labels and my pitch measurement agreed. Pitch (F ≈ 180–260 Hz, M ≈ 110–160 Hz) is the cheap check.
-  - Persian TTS pace: about 145 words/min in conversation.
+- First, ask the user for the four credentials (`GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`,
+  `GOOGLE_CLOUD_LOCATION=global`) unless `bin/gm doctor` already passes.
+- `bin/gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Orus --lexicon lexicon.tsv --out out/<name>`
+  makes one TTS call per line, checks each blind with Argon (consonant-skeleton diff, last word, cut-off,
+  pitch), retakes, level-matches, writes `episode.mp3` at −16 LUFS, and also `report.md` and `chapters.txt`.
+- Fix with `--redo-failed`, `--only 4,17`, or `bin/gm speak "…" --voice Orus --takes 4 --review` + `--adopt 4=take.wav`.
+  Then run `bin/qc-episode.sh out/<name>/episode.mp3`.
+- Never use multi-speaker TTS mode (voices land on the wrong speaker). Never set `languageCode: fa-IR`
+  (it invents lines). `[laughing]`-style tags are stripped by default because they sound acted.
+- Argon is suggestible: ask blind. Trust it on words, cut-offs, mispronunciations and wrong voices. Ignore its
+  delivery scores and gap opinions.

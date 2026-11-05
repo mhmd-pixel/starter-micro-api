@@ -27,6 +27,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { Modality, type GoogleGenAI } from "@google/genai"
 import { LISTEN_MODEL, TTS_MODEL, ffmpeg, parseJson, retry, samplesOf, secondsOf, wav } from "./lib.mts"
+import { RATE, abruptEnd, applyGain, compareText, edge, medianPitch, skeleton, speechLevel, stripTags } from "./speech.mts"
 
 export interface DialogueOptions {
   ai: () => GoogleGenAI
@@ -37,6 +38,7 @@ export interface DialogueOptions {
   retakes: number
   only?: number[]
   force: boolean
+  keepTags: boolean
   redoFailed: boolean
   adopt?: Record<number, string>
   assembleOnly: boolean
@@ -80,7 +82,6 @@ interface Entry {
   reviewError?: string
 }
 
-const RATE = 24000
 
 // ---------------------------------------------------------------- script
 
@@ -93,7 +94,7 @@ function loadLexicon(file?: string): [string, string][] {
     .filter((pair) => pair.length === 2 && pair[0])
 }
 
-function parseScript(file: string, lexicon: [string, string][], voices: Record<string, string>) {
+function parseScript(file: string, lexicon: [string, string][], voices: Record<string, string>, keepTags = false) {
   const turns: Turn[] = []
   let section = "Start"
   let sectionStart = true
@@ -110,7 +111,8 @@ function parseScript(file: string, lexicon: [string, string][], voices: Record<s
     const speaker = match[1].trim()
     const text = match[2].trim()
     if (!voices[speaker]) throw new Error(`No voice for speaker "${speaker}" (have ${Object.keys(voices).join(", ")})`)
-    const spoken = lexicon.reduce((t, [from, to]) => t.split(from).join(to), text)
+    // Tags like [laughing] are performed, but sound acted; they are dropped unless --keep-tags
+    const spoken = lexicon.reduce((t, [from, to]) => t.split(from).join(to), keepTags ? text : stripTags(text))
     const hash = createHash("sha1").update(`${TTS_MODEL}|${voices[speaker]}|${spoken}`).digest("hex").slice(0, 10)
     turns.push({ index: turns.length + 1, speaker, text, spoken, section, sectionStart, hash })
     sectionStart = false
@@ -120,98 +122,7 @@ function parseScript(file: string, lexicon: [string, string][], voices: Record<s
 
 export const wordCount = (text: string) => text.replace(/\[[^\]]*\]/g, " ").split(/\s+/).filter(Boolean).length
 
-// ---------------------------------------------------------------- persian-aware comparison
-
-function clean(text: string) {
-  return text
-    .replace(/\[[^\]]*\]|\([^)]*\)|（[^）]*）/g, " ") // [laughing], (خنده)
-    .replace(/[ً-ٰٟـ]/g, "")
-    .replace(/[يى]/g, "ی")
-    .replace(/ك/g, "ک")
-    .replace(/ة/g, "ه")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ؤ/g, "و")
-    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
-    .replace(/[‌‍]/g, "")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .toLowerCase()
-}
-
-const words = (text: string) => clean(text).split(/\s+/).filter(Boolean)
-
-/** Consonants only, spaces and doubled letters collapsed: colloquial spellings meet here */
-export const skeleton = (text: string) => clean(text).replace(/[\sاویهءئ]/g, "").replace(/(.)\1+/g, "$1")
-
-function lcsDiff<T>(a: T[], b: T[]) {
-  const t = Array.from({ length: a.length + 1 }, () => new Uint16Array(b.length + 1))
-  for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) t[i][j] = a[i] === b[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1])
-  const missing: T[] = []
-  const extra: T[] = []
-  let run = 0
-  let longest = 0
-  let i = 0
-  let j = 0
-  while (i < a.length || j < b.length) {
-    if (i < a.length && j < b.length && a[i] === b[j]) {
-      run = 0
-      i++, j++
-      continue
-    }
-    if (j < b.length && (i >= a.length || t[i][j + 1] >= t[i + 1][j])) extra.push(b[j++])
-    else missing.push(a[i++])
-    longest = Math.max(longest, ++run)
-  }
-  return { missing, extra, longest }
-}
-
-// ---------------------------------------------------------------- pitch
-
-/** Median F0 of voiced frames (autocorrelation on a 8 kHz copy) */
-export function medianPitch(pcm: Buffer) {
-  const step = 3
-  const rate = RATE / step
-  const n = Math.floor(pcm.length / 2 / step)
-  const x = new Float32Array(n)
-  for (let i = 0; i < n; i++) x[i] = pcm.readInt16LE(i * step * 2)
-  const size = Math.round(rate * 0.04)
-  const minLag = Math.floor(rate / 400)
-  const maxLag = Math.ceil(rate / 70)
-  const found: number[] = []
-  for (let s = 0; s + size + maxLag < n; s += size) {
-    let energy = 0
-    for (let i = 0; i < size; i++) energy += x[s + i] * x[s + i]
-    if (energy < size * 1200 * 1200) continue
-    let best = 0
-    let lag = 0
-    for (let l = minLag; l <= maxLag; l++) {
-      let c = 0
-      for (let i = 0; i < size; i++) c += x[s + i] * x[s + i + l]
-      if (c > best) (best = c), (lag = l)
-    }
-    if (lag && best > energy * 0.5) found.push(rate / lag)
-  }
-  found.sort((a, b) => a - b)
-  return found.length ? Math.round(found[Math.floor(found.length / 2)]) : 0
-}
-
 // ---------------------------------------------------------------- voice and check
-
-/** Trims silence generously (quiet Persian endings) and fades the edges */
-function edge(pcm: Buffer) {
-  const samples = Math.floor(pcm.length / 2)
-  const loud = (i: number) => Math.abs(pcm.readInt16LE(i * 2)) > 32768 * 0.01
-  let start = 0
-  while (start < samples && !loud(start)) start++
-  let end = samples - 1
-  while (end > start && !loud(end)) end--
-  const out = Buffer.from(pcm.subarray(Math.max(0, start - Math.round(RATE * 0.05)) * 2, Math.min(samples, end + Math.round(RATE * 0.25)) * 2))
-  const n = out.length / 2
-  const fadeIn = Math.min(n, Math.round(RATE * 0.01))
-  const fadeOut = Math.min(n, Math.round(RATE * 0.08))
-  for (let i = 0; i < fadeIn; i++) out.writeInt16LE(Math.round(out.readInt16LE(i * 2) * (i / fadeIn)), i * 2)
-  for (let i = 0; i < fadeOut; i++) out.writeInt16LE(Math.round(out.readInt16LE((n - 1 - i) * 2) * (i / fadeOut)), (n - 1 - i) * 2)
-  return out
-}
 
 async function synthesize(ai: GoogleGenAI, turn: Turn, voice: string) {
   return retry(
@@ -257,69 +168,16 @@ async function listen(ai: GoogleGenAI, turn: Turn, pcm: Buffer, listener: string
   )
 }
 
-/** Speech still loud in the last 120 ms means the model stopped mid-word */
-export function abruptEnd(pcm: Buffer) {
-  const n = Math.floor(pcm.length / 2)
-  const rms = (from: number, to: number) => {
-    let sum = 0
-    for (let i = from; i < to; i++) sum += pcm.readInt16LE(i * 2) ** 2
-    return Math.sqrt(sum / Math.max(1, to - from))
-  }
-  const tail = rms(Math.max(0, n - Math.round(RATE * 0.12)), n)
-  const body = rms(0, n)
-  return body > 0 && tail / body > 0.45
-}
-
-/** The script's last word has to be among the last words heard */
-function endsRight(text: string, heard: string) {
-  const last = words(text).map(skeleton).filter(Boolean).at(-1)
-  if (!last) return true
-  const tail = words(heard).slice(-3).map(skeleton).join("")
-  return tail.includes(last)
-}
-
 function judge(turn: Turn, heard: { heard: string; natural: number; issues: string[] }, pitch: number, expectPitch: number | undefined, abrupt: boolean): Check {
-  const words_ = lcsDiff(words(turn.text), words(heard.heard))
-  const a = [...skeleton(turn.text)]
-  const b = [...skeleton(heard.heard)]
-  const chars = lcsDiff(a, b)
-  const diff = chars.missing.length + chars.extra.length
-  const why: string[] = []
-  // A dropped or added word leaves a run of 3+ consonants; spelling variants leave 1-2
-  if (chars.longest >= 4) why.push(`run of ${chars.longest} consonants differs`)
-  if (diff > Math.max(3, a.length * 0.12)) why.push(`${diff} of ${a.length} consonants differ`)
-  if (!endsRight(turn.text, heard.heard)) why.push("last word missing or cut")
+  const c = compareText(turn.text, heard.heard)
+  const why = [...c.why]
   if (abrupt) why.push("audio ends mid-sound (cut off)")
   if (expectPitch && pitch && Math.abs(Math.log2(pitch / expectPitch)) > 0.45) why.push(`pitch ${pitch} Hz vs speaker's usual ${expectPitch} Hz: wrong voice?`)
-  const score = diff + 3 * Math.max(0, chars.longest - 2) + (why.some((w) => w.includes("cut")) ? 20 : 0) + (why.some((w) => w.startsWith("pitch")) ? 50 : 0)
+  const score = c.skeletonDiff + 3 * Math.max(0, c.longestRun - 2) + (why.some((w) => w.includes("cut")) ? 20 : 0) + (why.some((w) => w.startsWith("pitch")) ? 50 : 0)
   return {
-    heard: heard.heard, natural: heard.natural, issues: heard.issues, missing: words_.missing, extra: words_.extra,
-    skeletonDiff: diff, longestRun: chars.longest, pitch, score, ok: why.length === 0, why,
+    heard: heard.heard, natural: heard.natural, issues: heard.issues, missing: c.missing, extra: c.extra,
+    skeletonDiff: c.skeletonDiff, longestRun: c.longestRun, pitch, score, ok: why.length === 0, why,
   }
-}
-
-/** RMS of the louder (speech) frames only, so pauses and breaths do not count */
-export function speechLevel(pcm: Buffer) {
-  const n = Math.floor(pcm.length / 2)
-  const size = Math.round(RATE * 0.03)
-  const frames: number[] = []
-  for (let s = 0; s + size <= n; s += size) {
-    let sum = 0
-    for (let i = s; i < s + size; i++) sum += pcm.readInt16LE(i * 2) ** 2
-    frames.push(Math.sqrt(sum / size))
-  }
-  if (!frames.length) return 0
-  const peak = Math.max(...frames)
-  const loud = frames.filter((f) => f > peak * 0.2)
-  return Math.sqrt(loud.reduce((a, f) => a + f * f, 0) / loud.length)
-}
-
-function applyGain(pcm: Buffer, db: number) {
-  if (Math.abs(db) < 0.2) return pcm
-  const g = 10 ** (db / 20)
-  const out = Buffer.alloc(pcm.length)
-  for (let i = 0; i < pcm.length / 2; i++) out.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(pcm.readInt16LE(i * 2) * g))), i * 2)
-  return out
 }
 
 // ---------------------------------------------------------------- run
@@ -335,7 +193,7 @@ const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).p
 const pad = (n: number) => String(n).padStart(3, "0")
 
 export async function dialogue(o: DialogueOptions) {
-  const turns = parseScript(o.script, loadLexicon(o.lexicon), o.voices)
+  const turns = parseScript(o.script, loadLexicon(o.lexicon), o.voices, o.keepTags)
   const dir = path.resolve(o.out)
   await mkdir(path.join(dir, "turns"), { recursive: true })
   await mkdir(path.join(dir, "takes"), { recursive: true })

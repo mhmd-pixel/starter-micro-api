@@ -324,25 +324,3 @@ async function shrinkVideo(file: string, clip: Clip) {
 
 export const slug = (text: string) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "clip"
-
-export const words = (text: string) =>
-  text.toLowerCase().replace(/&/g, " and ").replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean)
-
-/** Word-level differences between what was intended and what was heard */
-export function diffWords(intended: string, heard: string) {
-  const a = words(intended)
-  const b = words(heard)
-  const table = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0))
-  for (let i = a.length - 1; i >= 0; i--)
-    for (let j = b.length - 1; j >= 0; j--) table[i][j] = a[i] === b[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1])
-  const missing: string[] = []
-  const extra: string[] = []
-  let i = 0
-  let j = 0
-  while (i < a.length || j < b.length) {
-    if (i < a.length && j < b.length && a[i] === b[j]) (i++, j++)
-    else if (j < b.length && (i >= a.length || table[i][j + 1] >= table[i + 1][j])) extra.push(b[j++])
-    else missing.push(a[i++])
-  }
-  return { missing, extra, matches: missing.length === 0 && extra.length === 0 }
-}

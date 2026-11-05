@@ -127,8 +127,11 @@ export async function retry<T>(run: () => Promise<T>, attempts = 5, label = "req
       if (/Error 403 \(Forbidden\)!!1/.test(message)) throw new Error("Google returned an HTML 403 page: the network is blocking Google, not a permissions problem")
       const permanent = status !== undefined && [400, 401, 403, 404].includes(status)
       if (permanent || attempt >= attempts) throw error
-      process.stderr.write(`  ${label} failed (${status ?? message.slice(0, 80)}), retrying ${attempt}/${attempts - 1}…\n`)
-      await new Promise((resolve) => setTimeout(resolve, 1500 * 2 ** (attempt - 1)))
+      // Quota errors need real waiting; other transient errors a short backoff
+      const quota = status === 429 || /RESOURCE_EXHAUSTED|"code":\s*429/.test(message)
+      const wait = quota ? Math.min(90000, 15000 * 2 ** (attempt - 1)) * (0.75 + Math.random() / 2) : 1500 * 2 ** (attempt - 1)
+      process.stderr.write(`  ${label} failed (${quota ? "rate limited" : (status ?? message.slice(0, 80))}), retrying in ${Math.round(wait / 1000)}s (${attempt}/${attempts - 1})…\n`)
+      await new Promise((resolve) => setTimeout(resolve, wait))
     }
   }
 }

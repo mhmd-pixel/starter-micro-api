@@ -342,7 +342,7 @@ async function dialogueCommand() {
     sectionGap: Number(opt("section-gap") || 1.0),
     tempo: Number(opt("tempo") || 1),
     listener: opt("listener") || "a native Tehrani Persian listener",
-    concurrency: Number(opt("concurrency") || 6),
+    concurrency: Number(opt("concurrency") || 3),
   })
 }
 

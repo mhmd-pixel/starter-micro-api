@@ -225,7 +225,7 @@ async function synthesize(ai: GoogleGenAI, turn: Turn, voice: string) {
       if (clips[0].rate !== RATE) throw new Error(`unexpected sample rate ${clips[0].rate}`)
       return edge(Buffer.concat(clips.map((c) => c.pcm)))
     },
-    5,
+    7,
     `turn ${turn.index} speech`,
   )
 }
@@ -250,7 +250,7 @@ async function listen(ai: GoogleGenAI, turn: Turn, pcm: Buffer, listener: string
       if (skeleton(turn.text).length >= 8 && skeleton(r.heard).length < skeleton(turn.text).length * 0.3) throw new Error("Review too short to be a transcription")
       return r
     },
-    4,
+    7,
     `turn ${turn.index} review`,
   )
 }
@@ -312,7 +312,7 @@ export async function dialogue(o: DialogueOptions) {
     if (o.assembleOnly) return false
     if (o.only) return o.only.includes(t.index)
     const e = manifest[t.index]
-    return o.force || !e || e.hash !== t.hash || !existsSync(path.join(dir, e.file))
+    return o.force || !e || e.hash !== t.hash || !e.check || !existsSync(path.join(dir, e.file))
   })
   if (todo.length) console.log(`voicing ${todo.length} turn(s)`)
 

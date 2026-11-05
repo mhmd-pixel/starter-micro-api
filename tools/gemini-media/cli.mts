@@ -11,9 +11,9 @@
  *   gm voices [--lang en-AU] [--gender female] [--search podcast]
  *   gm doctor                                   checks credentials and both models
  *
- *   gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Charon   two-host episode: chunked multi-speaker TTS,
- *                                               blind Argon check + auto retakes, assembled MP3 + report
- *       [--out dir] [--lexicon file.tsv] [--max-words 130] [--retakes 2] [--only 3,7] [--force] [--assemble] [--tempo 1.05]
+ *   gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Orus   multi-host episode, one TTS call per turn,
+ *                                               blind Argon + pitch check, auto retakes, assembled MP3 + report
+ *       [--out dir] [--lexicon file.tsv] [--retakes 3] [--only 12,40] [--force] [--assemble] [--gap 0.3] [--tempo 1.0]
  *
  * Common: --env <file> (default ~/.config/gemini-media/vertex.env, then env vars),
  * --model <id>, --save <file> to keep the answer, --listener "who should listen".
@@ -334,16 +334,15 @@ async function dialogueCommand() {
     voices,
     out: opt("out") || path.join(OUT, "dialogue", slug(path.basename(script, path.extname(script)))),
     lexicon: opt("lexicon"),
-    maxWords: Number(opt("max-words") || 130),
-    retakes: Number(opt("retakes") ?? 2),
+    retakes: Number(opt("retakes") ?? 3),
     only: opt("only")?.split(",").map(Number),
     force: flag("force"),
     assembleOnly: flag("assemble"),
-    gap: Number(opt("gap") || 0.35),
-    sectionGap: Number(opt("section-gap") || 0.9),
+    gap: Number(opt("gap") || 0.3),
+    sectionGap: Number(opt("section-gap") || 1.0),
     tempo: Number(opt("tempo") || 1),
     listener: opt("listener") || "a native Tehrani Persian listener",
-    concurrency: Number(opt("concurrency") || 4),
+    concurrency: Number(opt("concurrency") || 6),
   })
 }
 

@@ -62,23 +62,27 @@ Output goes to `out/` (gitignored) unless `--out` says otherwise; `.mp3` or `.wa
 - For a full ad mix: `bin/gm listen reel.mp4 "As a mixing engineer: is the VO intelligible over the music? ..."`.
   Apply only fixes that are safe either way.
 
-## Two-host episodes (`bin/gm dialogue`)
+## Multi-host episodes (`bin/gm dialogue`)
 
 `bin/gm dialogue script.txt --voices Sara=Sulafat,Kaveh=Orus --lexicon lexicon.tsv --out out/<name>`
 
-- Script: `Name: text` per line; `# Section` lines start a new chunk and become chapters. Lexicon is
-  `written<TAB>spoken` and is applied to the speech only.
-- It splits the script into multi-speaker chunks (≤ `--max-words`, default 130, never across a section),
-  voices them 4 at a time, has Argon transcribe each one **blind**, and diffs the words with a Persian-aware normaliser
-  (ZWNJ, ی/ي, ezafe, harakat). It retakes up to `--retakes` times, keeps the best, then stitches with
-  0.35 s gaps (0.9 s at sections), normalises loudness to −16 LUFS, and writes `episode.mp3`, `report.md` and `manifest.json`.
-  Re-running re-voices only chunks whose text changed. `--only 5,9` redoes specific chunks.
+- Script: `Name: text` per line; `# Section` lines become chapters. The lexicon is `written<TAB>spoken`
+  and is applied to the speech only.
+- **One TTS call per turn** in that speaker's voice, 6 at a time. Each take gets a blind Argon transcription,
+  compared on a consonant skeleton: spelling variants like «سیلندرو/سیلندر رو» and «یه کم/یکم» pass, while dropped
+  or added words fail. Each take also gets a pitch check against that speaker's other turns. Failing turns are
+  retaken (up to `--retakes`, default 3) and the best is kept. Turns are stitched with varied
+  0.3–0.42 s gaps (shorter after a question, 1.0 s between sections), normalised to −16 LUFS.
+  Outputs: `episode.mp3`, `report.md` (per-turn verdicts, timestamps), `chapters.txt`, `turns.json`.
+  A re-run re-voices only changed turns; `--only 12,40` redoes specific ones.
 - Learned the hard way (Nov 2026):
-  - **Real names as speaker labels get read aloud** ("سارا، کیس اول…", 4/4 takes). The tool sends neutral
-    `Speaker1:`/`Speaker2:` labels instead. A "TTS the following conversation…" preamble is also read aloud.
+  - **Multi-speaker mode can't keep voices on speakers.** The first configured voice goes to whoever
+    speaks first, whatever the labels say (16/16 takes). Real names as labels are also read aloud ("سارا، کیس اول…"),
+    and a "TTS the following conversation…" preamble is read aloud too. Hence one call per turn.
   - **Don't set `languageCode: fa-IR`.** It invented extra lines. Without it, the Persian is native Tehrani.
-  - `[laughing]`, `[sigh]` are performed in multi-speaker mode, not read.
-  - About 1 take in 3 drops or adds words, so the blind check plus retakes is essential.
-  - No fa-IR prebuilt voices exist. Standard voices work: Argon rated Sulafat (F) + Orus (M) best for
-    a senior woman and a younger man. Charon, Iapetus and Achernar's partner sound older and deeper.
-  - Persian TTS pace is about 115 words/min, slower than an English estimate.
+  - `[laughing]`, `[sigh]` at the start of a line are performed, not read.
+  - About 1 take in 3 drops or adds a word somewhere, so always run the blind check.
+  - No fa-IR prebuilt voices exist. Argon rated Sulafat (F) + Orus (M) best for a senior woman and a younger man.
+    Charon and Iapetus sound older and deeper.
+  - Argon's voice-gender labels and my pitch measurement agreed. Pitch (F ≈ 180–260 Hz, M ≈ 110–160 Hz) is the cheap check.
+  - Persian TTS pace: about 145 words/min in conversation.

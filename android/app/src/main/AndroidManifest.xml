@@ -3,13 +3,18 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Requested at runtime only when the web app asks for the camera
-         (photo uploads, in-page barcode scanning). -->
+    <!-- Requested at runtime only when needed: photo uploads, in-page camera,
+         and Hamyar voice input. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
         android:allowBackup="false"
+        android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
@@ -28,13 +33,25 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Links to the Optoflow site open in the app. Becomes automatic once
-                 /.well-known/assetlinks.json is published on the domain. -->
+            <!-- optoflow.ir and clinic subdomains open in the app. Becomes automatic
+                 once /.well-known/assetlinks.json is published on the domain. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="${deepLinkHost}" />
+                <data android:scheme="https" />
+                <data android:host="${deepLinkHost}" />
+                <data android:host="*.${deepLinkHost}" />
+            </intent-filter>
+            <!-- "Share → Optoflow" from Telegram, WhatsApp, Eitaa, Bale, gallery... -->
+            <intent-filter android:label="@string/share_label">
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 

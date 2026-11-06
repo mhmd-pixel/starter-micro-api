@@ -9,6 +9,7 @@ val startUrl = providers.gradleProperty("optoflow.startUrl").get()
 val allowedHosts = providers.gradleProperty("optoflow.allowedHosts").get()
     .split(",").map { it.trim() }.filter { it.isNotEmpty() }
 val startHost = URI(startUrl).host
+val sharePath = providers.gradleProperty("optoflow.sharePath").get()
 
 // Release signing is read from android/keystore.properties (never committed).
 val keystoreProps = Properties().apply {
@@ -22,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "com.optoflow.app"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
@@ -32,6 +33,9 @@ android {
             "String[]", "ALLOWED_HOSTS",
             allowedHosts.joinToString(prefix = "{", postfix = "}") { "\"$it\"" },
         )
+        buildConfigField("String", "SHARE_PATH", "\"$sharePath\"")
+        // Next.js 16 supports Chrome 111+; older WebViews get an update warning.
+        buildConfigField("int", "MIN_WEBVIEW_MAJOR", "111")
         manifestPlaceholders["deepLinkHost"] = startHost
     }
 
@@ -77,4 +81,5 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.browser)
     implementation(libs.material)
+    implementation(libs.androidx.biometric)
 }

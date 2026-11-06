@@ -28,7 +28,15 @@ class NativeBridge(
         fun openExternal(uri: Uri)
         fun print(jobName: String)
         fun saveFile(name: String, mimeType: String, bytes: ByteArray)
+        fun hasSharedItems(): Boolean
+        /** Called off the main thread. */
+        fun takeSharedItems(): JSONObject
+        fun appLockState(): JSONObject
+        fun setAppLock(enabled: Boolean?, timeoutMinutes: Int?)
+        fun lockNow()
     }
+
+    private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     private val originRules = UrlPolicy.bridgeOriginRules()
 
@@ -58,6 +66,20 @@ class NativeBridge(
         val id = req.opt("id")
         val params = req.optJSONObject("params") ?: JSONObject()
         val response = JSONObject().put("id", id)
+        if (req.optString("method") == "takeSharedItems") {
+            // Encoding large files can take a moment; keep the UI responsive.
+            worker.execute {
+                val r = runCatching { host.takeSharedItems() }
+                webView.post {
+                    r.fold(
+                        { response.put("ok", true).put("result", it) },
+                        { response.put("ok", false).put("error", it.message ?: "Failed") },
+                    )
+                    reply.postMessage(response.toString())
+                }
+            }
+            return
+        }
         try {
             val result: Any? = when (val method = req.optString("method")) {
                 "getAppInfo" -> appInfo()
@@ -86,6 +108,19 @@ class NativeBridge(
                     )
                     null
                 }
+                "hasSharedItems" -> host.hasSharedItems()
+                "getAppLock" -> host.appLockState()
+                "setAppLock" -> {
+                    host.setAppLock(
+                        if (params.has("enabled")) params.getBoolean("enabled") else null,
+                        if (params.has("timeoutMinutes")) params.getInt("timeoutMinutes") else null,
+                    )
+                    host.appLockState()
+                }
+                "lockNow" -> {
+                    host.lockNow()
+                    null
+                }
                 else -> throw IllegalArgumentException("Unknown method: $method")
             }
             response.put("ok", true).put("result", result ?: JSONObject.NULL)
@@ -109,7 +144,7 @@ class NativeBridge(
 
     companion object {
         private const val CHANNEL = "OptoflowNativeChannel"
-        private val FEATURES = listOf("share", "openExternal", "print", "saveFile")
+        private val FEATURES = listOf("share", "openExternal", "print", "saveFile", "sharedItems", "appLock")
 
         /** Evaluated in the page to save a blob:/data: URL through the bridge. */
         fun saveUrlScript(url: String, fileName: String?): String =
@@ -153,7 +188,12 @@ class NativeBridge(
                 share: function (data) { return call('share', data); },
                 openExternal: function (url) { return call('openExternal', { url: url }); },
                 print: function (jobName) { return call('print', { jobName: jobName }); },
-                saveFile: function (opts) { return call('saveFile', opts); }
+                saveFile: function (opts) { return call('saveFile', opts); },
+                hasSharedItems: function () { return call('hasSharedItems'); },
+                takeSharedItems: function () { return call('takeSharedItems'); },
+                getAppLock: function () { return call('getAppLock'); },
+                setAppLock: function (opts) { return call('setAppLock', opts); },
+                lockNow: function () { return call('lockNow'); }
               });
               Object.defineProperty(window, 'OptoflowNative', { value: api });
               Object.defineProperty(window, '__optoflowSaveUrl', { value: saveUrl });

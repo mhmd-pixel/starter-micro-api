@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 coreKtx = "1.19.1"
 appcompat = "1.8.0"
 activity = "1.13.0"
@@ -7,6 +7,7 @@ webkit = "1.18.0"
 splashscreen = "1.2.0"
 browser = "1.10.0"
 material = "1.14.0"
+biometric = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -16,6 +17,7 @@ androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "w
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

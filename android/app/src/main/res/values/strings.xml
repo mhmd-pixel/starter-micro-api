@@ -1,11 +1,33 @@
 <resources>
+    <!-- Launcher name: still to be confirmed (Optoflow / اپتوفلو). -->
     <string name="app_name">Optoflow</string>
-    <string name="offline_title">Can\'t reach Optoflow</string>
-    <string name="offline_body">Check your internet connection. We\'ll reconnect automatically.</string>
-    <string name="retry">Try again</string>
-    <string name="choose_file">Choose a file</string>
-    <string name="download_started">Downloading %1$s…</string>
-    <string name="download_saved">Saved %1$s to Downloads</string>
-    <string name="download_failed">Couldn\'t save the file</string>
-    <string name="no_app_for_link">No app can open this link</string>
+    <string name="share_label">ارسال به اپتوفلو</string>
+
+    <string name="offline_title">اتصال برقرار نیست</string>
+    <string name="offline_body">اتصال اینترنت را بررسی کنید. به‌محض برقراری اتصال، دوباره وصل می‌شویم.</string>
+    <string name="retry">تلاش دوباره</string>
+
+    <string name="choose_file">انتخاب فایل</string>
+    <string name="download_started">در حال دانلود %1$s…</string>
+    <string name="download_saved">%1$s ذخیره شد</string>
+    <string name="download_failed">ذخیره‌ی فایل ممکن نشد</string>
+    <string name="open">باز کردن</string>
+    <string name="no_app_for_link">برنامه‌ای برای باز کردن این لینک پیدا نشد</string>
+    <string name="press_back_again">برای خروج، دوباره «بازگشت» را بزنید</string>
+
+    <string name="reset_title">پاک کردن داده‌های کلینیک؟</string>
+    <string name="reset_body">این صفحه همه‌ی داده‌های این کلینیک را پاک می‌کند و قابل بازگشت نیست.</string>
+    <string name="reset_confirm">پاک کن</string>
+    <string name="cancel">انصراف</string>
+
+    <string name="lock_title">اپتوفلو قفل است</string>
+    <string name="lock_subtitle">برای ادامه، هویت خود را تأیید کنید</string>
+    <string name="unlock">باز کردن قفل</string>
+
+    <string name="share_too_large">فایل‌های ارسالی بیش از حد بزرگ‌اند</string>
+    <string name="share_failed">دریافت فایل ممکن نشد</string>
+
+    <string name="webview_old_title">به‌روزرسانی لازم است</string>
+    <string name="webview_old_body">نسخه‌ی «Android System WebView» این گوشی (%1$s) قدیمی است و ممکن است اپتوفلو درست کار نکند. لطفاً آن را از گوگل‌پلی یا فروشگاه برنامه‌ی گوشی به‌روز کنید.</string>
+    <string name="ok">باشه</string>
 </resources>

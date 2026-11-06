@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="camera" path="camera/" />
+    <!-- Downloads on Android 8–9, which can't use MediaStore.Downloads. -->
+    <external-files-path name="downloads" path="Download/" />
 </paths>

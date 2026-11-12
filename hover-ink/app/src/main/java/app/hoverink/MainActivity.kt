@@ -42,7 +42,7 @@ class MainActivity : Activity(), DrawingView.Listener {
     private lateinit var canvas: DrawingView
     private lateinit var pill: TextView
     private lateinit var modeChip: TextView
-    private lateinit var penBtn: ImageButton
+    private lateinit var toolBtn: ImageButton
     private lateinit var eraserBtn: ImageButton
     private lateinit var colorDot: View
     private lateinit var undoBtn: ImageButton
@@ -65,7 +65,7 @@ class MainActivity : Activity(), DrawingView.Listener {
         canvas = findViewById(R.id.canvas)
         pill = findViewById(R.id.pill)
         modeChip = findViewById(R.id.mode)
-        penBtn = findViewById(R.id.pen)
+        toolBtn = findViewById(R.id.tool)
         eraserBtn = findViewById(R.id.eraser)
         colorDot = findViewById(R.id.colorDot)
         undoBtn = findViewById(R.id.undo)
@@ -75,10 +75,10 @@ class MainActivity : Activity(), DrawingView.Listener {
 
         loadSettings()
         modeChip.setOnClickListener { chooseMode() }
-        penBtn.setOnClickListener { setEraser(false) }
-        eraserBtn.setOnClickListener { setEraser(true) }
+        // Tap a tool to select it; tap it again for its settings.
+        toolBtn.setOnClickListener { if (canvas.eraser) setEraser(false) else chooseTool() }
+        eraserBtn.setOnClickListener { if (canvas.eraser) chooseEraserSize() else setEraser(true) }
         findViewById<View>(R.id.colorButton).setOnClickListener { chooseColor() }
-        findViewById<View>(R.id.size).setOnClickListener { chooseSize() }
         undoBtn.setOnClickListener { canvas.undo() }
         redoBtn.setOnClickListener { canvas.redo() }
         findViewById<View>(R.id.more).setOnClickListener { showMore(it) }
@@ -141,7 +141,13 @@ class MainActivity : Activity(), DrawingView.Listener {
         canvas.hoverMode = DrawingView.HoverMode.entries.getOrElse(prefs.getInt(KEY_MODE, 0)) { DrawingView.HoverMode.ALWAYS }
         canvas.background = DrawingView.Background.entries.getOrElse(prefs.getInt(KEY_BG, 0)) { DrawingView.Background.PAPER }
         canvas.color = prefs.getInt(KEY_COLOR, Color.BLACK)
-        canvas.brushWidth = prefs.getFloat(KEY_WIDTH_DP, 4f) * dp
+        canvas.tool = DrawingView.Tool.entries.getOrElse(prefs.getInt(KEY_TOOL, 0)) { DrawingView.Tool.PEN }
+        canvas.eraserWidth = prefs.getFloat(KEY_ERASER_DP, 12f) * dp
+        // Older versions had one brush size for everything; keep it for the pen.
+        if (prefs.contains(KEY_WIDTH_DP) && !prefs.contains(widthKey(DrawingView.Tool.PEN))) {
+            save { putFloat(widthKey(DrawingView.Tool.PEN), prefs.getFloat(KEY_WIDTH_DP, 3f)) }
+        }
+        applyToolSettings()
         canvas.steadiness = prefs.getFloat(KEY_STEADY, 0.35f)
         canvas.fingerDraws = prefs.getBoolean(KEY_FINGER, false)
         refreshToolbar()
@@ -157,7 +163,8 @@ class MainActivity : Activity(), DrawingView.Listener {
                 DrawingView.HoverMode.HOLD_BUTTON -> R.string.mode_button
             },
         )
-        penBtn.background = if (!canvas.eraser) getDrawable(R.drawable.selected_bg) else null
+        toolBtn.setImageResource(TOOL_ICONS.getValue(canvas.tool))
+        toolBtn.background = if (!canvas.eraser) getDrawable(R.drawable.selected_bg) else null
         eraserBtn.background = if (canvas.eraser) getDrawable(R.drawable.selected_bg) else null
         colorDot.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -253,41 +260,134 @@ class MainActivity : Activity(), DrawingView.Listener {
         dialog = AlertDialog.Builder(this).setTitle(R.string.color).setView(grid).show()
     }
 
-    private fun chooseSize() {
-        val maxDp = 40
-        val preview = object : View(this) {
-            val p = Paint(Paint.ANTI_ALIAS_FLAG)
-            override fun onDraw(c: Canvas) {
-                p.color = if (canvas.eraser) Color.GRAY else canvas.color
-                c.drawCircle(width / 2f, height / 2f, canvas.brushWidth / 2f, p)
-            }
+    private fun widthKey(t: DrawingView.Tool) = "width_dp_" + t.name
+    private fun opacityKey(t: DrawingView.Tool) = "opacity_" + t.name
+
+    /** Loads the selected pen's own size and opacity. */
+    private fun applyToolSettings() {
+        val t = canvas.tool
+        val (defWidth, defOpacity) = TOOL_DEFAULTS.getValue(t)
+        canvas.brushWidth = prefs.getFloat(widthKey(t), defWidth) * dp
+        canvas.opacity = prefs.getInt(opacityKey(t), defOpacity)
+    }
+
+    private fun sliderRow(parent: LinearLayout, title: Int, max: Int, value: Int, format: (Int) -> String, onChange: (Int) -> Unit) {
+        val label = TextView(this).apply {
+            textSize = 14f
+            setPadding(0, (12 * dp).roundToInt(), 0, 0)
         }
-        val label = TextView(this).apply { gravity = Gravity.CENTER }
-        fun updateLabel() { label.text = "${(canvas.brushWidth / dp * 10).roundToInt() / 10f} dp" }
+        fun update(v: Int) { label.text = getString(title) + "  ·  " + format(v) }
+        update(value)
         val bar = SeekBar(this).apply {
-            max = maxDp * 2 - 1 // half-dp steps from 0.5 to 40
-            progress = ((canvas.brushWidth / dp) * 2 - 1).roundToInt().coerceIn(0, max)
+            this.max = max
+            progress = value
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: SeekBar, v: Int, fromUser: Boolean) {
-                    canvas.brushWidth = (v + 1) / 2f * dp
-                    updateLabel()
-                    preview.invalidate()
+                override fun onProgressChanged(sb: SeekBar, v: Int, fromUser: Boolean) {
+                    update(v)
+                    if (fromUser) onChange(v)
                 }
-                override fun onStartTrackingTouch(s: SeekBar) {}
-                override fun onStopTrackingTouch(s: SeekBar) {
-                    save { putFloat(KEY_WIDTH_DP, canvas.brushWidth / dp) }
-                }
+                override fun onStartTrackingTouch(sb: SeekBar) {}
+                override fun onStopTrackingTouch(sb: SeekBar) {}
             })
         }
-        updateLabel()
+        parent.addView(label)
+        parent.addView(bar)
+    }
+
+    /** Size slider position (half-dp steps from 0.5 dp) ↔ px. */
+    private fun sizeToProgress(px: Float) = ((px / dp) * 2 - 1).roundToInt().coerceIn(0, MAX_SIZE_DP * 2 - 1)
+    private fun progressToDp(v: Int) = (v + 1) / 2f
+    private fun dpLabel(v: Int) = "${progressToDp(v)} dp"
+
+    private fun chooseTool() {
+        val pad = (20 * dp).roundToInt()
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding((20 * dp).roundToInt(), (8 * dp).roundToInt(), (20 * dp).roundToInt(), 0)
-            addView(preview, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (maxDp * dp + 16 * dp).roundToInt()))
-            addView(label)
-            addView(bar)
+            setPadding(pad, (8 * dp).roundToInt(), pad, 0)
         }
-        AlertDialog.Builder(this).setTitle(R.string.size).setView(box).setPositiveButton(R.string.done, null).show()
+        val preview = DrawingView(this).apply {
+            inputEnabled = false
+            background = canvas.background
+            steadiness = 0f
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(v: View, o: android.graphics.Outline) = o.setRoundRect(0, 0, v.width, v.height, 12 * dp)
+            }
+        }
+        fun refreshPreview() {
+            preview.tool = canvas.tool
+            preview.color = canvas.color
+            preview.brushWidth = canvas.brushWidth
+            preview.opacity = canvas.opacity
+            preview.showDemo()
+        }
+
+        // Row of pens.
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val cells = HashMap<DrawingView.Tool, View>()
+        lateinit var sliders: LinearLayout
+        fun buildSliders() {
+            sliders.removeAllViews()
+            val t = canvas.tool
+            sliderRow(sliders, R.string.size, MAX_SIZE_DP * 2 - 1, sizeToProgress(canvas.brushWidth), ::dpLabel) { v ->
+                canvas.brushWidth = progressToDp(v) * dp
+                save { putFloat(widthKey(t), progressToDp(v)) }
+                refreshPreview()
+            }
+            sliderRow(sliders, R.string.opacity, 100, canvas.opacity, { "$it%" }) { v ->
+                canvas.opacity = v
+                save { putInt(opacityKey(t), v) }
+                refreshPreview()
+            }
+        }
+        fun select(t: DrawingView.Tool) {
+            canvas.tool = t
+            save { putInt(KEY_TOOL, t.ordinal) }
+            applyToolSettings()
+            cells.forEach { (k, v) -> v.background = if (k == t) getDrawable(R.drawable.chip_bg) else null }
+            buildSliders()
+            refreshPreview()
+            refreshToolbar()
+        }
+        DrawingView.Tool.entries.forEach { t ->
+            val cell = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(0, (8 * dp).roundToInt(), 0, (8 * dp).roundToInt())
+                isClickable = true
+                addView(android.widget.ImageView(this@MainActivity).apply { setImageResource(TOOL_ICONS.getValue(t)) })
+                addView(TextView(this@MainActivity).apply {
+                    setText(TOOL_NAMES.getValue(t))
+                    textSize = 12f
+                    gravity = Gravity.CENTER
+                })
+                setOnClickListener { select(t) }
+            }
+            cells[t] = cell
+            row.addView(cell, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        }
+        box.addView(row)
+        box.addView(preview, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (110 * dp).roundToInt()).apply {
+            topMargin = (8 * dp).roundToInt()
+        })
+        sliders = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        box.addView(sliders)
+        select(canvas.tool)
+
+        AlertDialog.Builder(this).setTitle(R.string.pens).setView(box).setPositiveButton(R.string.done, null).show()
+    }
+
+    private fun chooseEraserSize() {
+        val pad = (20 * dp).roundToInt()
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, 0, pad, 0)
+        }
+        sliderRow(box, R.string.size, MAX_SIZE_DP * 2 - 1, sizeToProgress(canvas.eraserWidth), ::dpLabel) { v ->
+            canvas.eraserWidth = progressToDp(v) * dp
+            save { putFloat(KEY_ERASER_DP, progressToDp(v)) }
+        }
+        AlertDialog.Builder(this).setTitle(R.string.eraser_size).setView(box).setPositiveButton(R.string.done, null).show()
     }
 
     private fun chooseSteadiness() {
@@ -423,6 +523,32 @@ class MainActivity : Activity(), DrawingView.Listener {
         private const val KEY_BG = "background"
         private const val KEY_COLOR = "color"
         private const val KEY_WIDTH_DP = "width_dp"
+        private const val KEY_TOOL = "tool"
+        private const val KEY_ERASER_DP = "eraser_dp"
+        private const val MAX_SIZE_DP = 40
+
+        /** Default size (dp) and opacity (%) for each pen. */
+        private val TOOL_DEFAULTS = mapOf(
+            DrawingView.Tool.PEN to (3f to 100),
+            DrawingView.Tool.PENCIL to (3f to 40),
+            DrawingView.Tool.FOUNTAIN to (6f to 100),
+            DrawingView.Tool.MARKER to (16f to 40),
+            DrawingView.Tool.BRUSH to (8f to 100),
+        )
+        private val TOOL_ICONS = mapOf(
+            DrawingView.Tool.PEN to R.drawable.ic_tool_pen,
+            DrawingView.Tool.PENCIL to R.drawable.ic_tool_pencil,
+            DrawingView.Tool.FOUNTAIN to R.drawable.ic_tool_fountain,
+            DrawingView.Tool.MARKER to R.drawable.ic_tool_marker,
+            DrawingView.Tool.BRUSH to R.drawable.ic_tool_brush,
+        )
+        private val TOOL_NAMES = mapOf(
+            DrawingView.Tool.PEN to R.string.tool_pen,
+            DrawingView.Tool.PENCIL to R.string.tool_pencil,
+            DrawingView.Tool.FOUNTAIN to R.string.tool_fountain,
+            DrawingView.Tool.MARKER to R.string.tool_marker,
+            DrawingView.Tool.BRUSH to R.string.tool_brush,
+        )
         private const val KEY_STEADY = "steadiness"
         private const val KEY_FINGER = "finger_draws"
         private const val KEY_SEEN_HELP = "seen_help"

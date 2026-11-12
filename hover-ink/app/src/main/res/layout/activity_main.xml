@@ -52,7 +52,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ImageButton android:id="@+id/pen" style="@style/BarButton" android:contentDescription="@string/pen" android:src="@drawable/ic_pen" />
+            <ImageButton android:id="@+id/tool" style="@style/BarButton" android:contentDescription="@string/pens" android:src="@drawable/ic_tool_pen" />
             <ImageButton android:id="@+id/eraser" style="@style/BarButton" android:contentDescription="@string/eraser" android:src="@drawable/ic_eraser" />
 
             <FrameLayout
@@ -69,7 +69,6 @@
                     android:layout_gravity="center" />
             </FrameLayout>
 
-            <ImageButton android:id="@+id/size" style="@style/BarButton" android:contentDescription="@string/size" android:src="@drawable/ic_size" />
             <ImageButton android:id="@+id/undo" style="@style/BarButton" android:contentDescription="@string/undo" android:src="@drawable/ic_undo" />
             <ImageButton android:id="@+id/redo" style="@style/BarButton" android:contentDescription="@string/redo" android:src="@drawable/ic_redo" />
             <ImageButton android:id="@+id/more" style="@style/BarButton" android:contentDescription="@string/more" android:src="@drawable/ic_more" />

@@ -41,4 +41,26 @@ class ScreenshotTest {
         val out = File("build/screenshots").apply { mkdirs() }
         File(out, "main.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
+
+    @Test
+    fun renderPenPicker() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup().get()
+        org.robolectric.shadows.ShadowDialog.getLatestDialog()?.dismiss()
+        activity.findViewById<android.view.View>(R.id.tool).performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        // Pick the pencil so the preview shows its texture.
+        val dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        val decor = dialog.window!!.decorView
+        fun find(v: android.view.View, text: String): android.view.View? {
+            if (v is android.widget.TextView && v.text == text) return v.parent as android.view.View
+            if (v is android.view.ViewGroup) for (i in 0 until v.childCount) find(v.getChildAt(i), text)?.let { return it }
+            return null
+        }
+        find(decor, "Pencil")!!.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        val bmp = Bitmap.createBitmap(decor.width, decor.height, Bitmap.Config.ARGB_8888)
+        decor.draw(Canvas(bmp))
+        File("build/screenshots").mkdirs()
+        File("build/screenshots/pen_picker.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
 }

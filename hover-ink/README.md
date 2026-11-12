@@ -15,9 +15,23 @@ Ultra; works on any Android 11+ device whose stylus reports hover.
 Touching with the pen also draws, with pressure. Fingers are ignored (palm
 rejection) unless "Fingers can draw" is on.
 
+## Pens
+
+Tap the pen button to pick a pen and set its size and opacity (0–100 %, remembered per pen):
+
+| Pen | Character |
+| --- | --- |
+| **Pen** | Smooth ballpoint line; pressure changes width when touching. |
+| **Pencil** | Grainy graphite made of many small dabs on a paper-grain texture, with slight randomness and gaps. At low opacity every pass over the same spot gets darker. |
+| **Fountain** | Calligraphy nib at 45°: thick and thin strokes depending on direction. |
+| **Marker** | See-through highlighter that multiplies with what's underneath, so lines stay visible. |
+| **Brush** | Ink brush: thicker when you move slowly, thinner when fast, eases in at the start. |
+
+Tap the eraser again to change its size.
+
 ## Features
 
-Pen and eraser, 18 colours, brush size, steadiness (smooths hand shake while
+Pens and eraser, 18 colours, steadiness (smooths hand shake while
 hovering), undo/redo, undoable clear, paper/grid/dark backgrounds, save to
 Gallery (Pictures/Hover Ink), share, full-screen with the screen kept on, and
 the drawing is kept when you leave the app.

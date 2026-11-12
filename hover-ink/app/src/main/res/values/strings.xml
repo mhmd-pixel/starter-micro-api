@@ -10,7 +10,14 @@
     <string name="pill_inking">Hover ink on</string>
     <string name="pill_paused_tap">Hover ink off · tap pen to start</string>
     <string name="pill_paused_button">Hold the pen button to draw</string>
-    <string name="pen">Pen</string>
+    <string name="pens">Pens</string>
+    <string name="tool_pen">Pen</string>
+    <string name="tool_pencil">Pencil</string>
+    <string name="tool_fountain">Fountain</string>
+    <string name="tool_marker">Marker</string>
+    <string name="tool_brush">Brush</string>
+    <string name="opacity">Opacity</string>
+    <string name="eraser_size">Eraser size</string>
     <string name="eraser">Eraser</string>
     <string name="color">Colour</string>
     <string name="size">Brush size</string>
@@ -34,5 +41,5 @@
     <string name="done">Done</string>
     <string name="cleared">Canvas cleared · Undo brings it back</string>
     <string name="help_title">Drawing without touching</string>
-    <string name="help_body">Hold the S Pen just above the screen and move it: Hover Ink draws where the pen points.\n\nChoose how hovering draws with the button on the left of the toolbar:\n\n• Hover: always draws. Pull the pen away to lift it and start a new line.\n• Tap: tap the screen with the pen to switch hover ink on or off.\n• Button: hold the S Pen side button to draw.\n\nTouching the screen with the pen draws too, with pressure. Fingers are ignored so your palm can rest on the screen (turn on \"Fingers can draw\" under More).\n\nIf nothing happens when hovering, turn on Settings › Advanced features › S Pen › Air view. If the side button opens Air command instead of drawing, use Hover or Tap mode, or turn off opening Air command with the pen button in the S Pen settings.</string>
+    <string name="help_body">Hold the S Pen just above the screen and move it: Hover Ink draws where the pen points.\n\nChoose how hovering draws with the button on the left of the toolbar:\n\n• Hover: always draws. Pull the pen away to lift it and start a new line.\n• Tap: tap the screen with the pen to switch hover ink on or off.\n• Button: hold the S Pen side button to draw.\n\nTap the pen button to pick a pen (pen, pencil, fountain, marker, brush) and set its size and opacity. A pencil at low opacity gets darker each time you go over the same spot. Tap the eraser again to change its size.\n\nTouching the screen with the pen draws too, with pressure. Fingers are ignored so your palm can rest on the screen (turn on \"Fingers can draw\" under More).\n\nIf nothing happens when hovering, turn on Settings › Advanced features › S Pen › Air view. If the side button opens Air command instead of drawing, use Hover or Tap mode, or turn off opening Air command with the pen button in the S Pen settings.</string>
 </resources>

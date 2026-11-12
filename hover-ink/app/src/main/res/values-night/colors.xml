@@ -1,0 +1,7 @@
+<resources>
+    <color name="bar_bg">#F22C2C2E</color>
+    <color name="bar_fg">#F2F2F7</color>
+    <color name="bar_selected">#330A84FF</color>
+    <color name="accent">#4DA3FF</color>
+    <color name="pill_bg">#CC000000</color>
+</resources>

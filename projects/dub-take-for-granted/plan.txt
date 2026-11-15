@@ -1,0 +1,9 @@
+vo/s1-take-1.wav 0.20 4.38
+vo/s2-take-1.wav 4.88 6.06
+vo/s3-take-3.wav 11.24 3.95
+vo/s4b/s4-take-1.wav 15.49 6.38
+vo/s5-take-1.wav 22.17 3.82
+vo/s6-take-1.wav 26.29 4.02
+vo/s7-take-2.wav 31.70 4.42
+vo/s8-take-1.wav 36.70 6.30
+vo/s9-take-1.wav 43.30 7.03

@@ -1,0 +1,7 @@
+vo/c1-take-2.wav 0.4 6.17
+vo/c2-take-3.wav 6.97 6.46
+vo/c3c/c3-take-2.wav 13.83 6.52
+vo/c4-take-2.wav 20.75 6.96
+vo/c5-take-1.wav 28.1 7.2
+vo/c6-take-3.wav 35.7 6.48
+vo/c7-take-2.wav 42.59 6.14

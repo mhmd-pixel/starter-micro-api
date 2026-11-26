@@ -50,6 +50,57 @@ export function lcsDiff<T>(a: T[], b: T[]) {
   return { missing, extra, longest }
 }
 
+
+// ---------------------------------------------------------------- word-level checks
+
+/** Number words, colloquial spellings mapped to standard ones, so «شیش» = «شش», «پونزده» = «پانزده» */
+const NUMBER_ROOTS = ["صفر", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه", "ده", "یازده", "دوازده", "سیزده", "چهارده",
+  "پانزده", "شانزده", "هفده", "هجده", "نوزده", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود", "صد", "دویست",
+  "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد", "هزار", "میلیون", "نیم", "اول", "دوم", "سوم"]
+const COLLOQUIAL_NUMBERS: [RegExp, string][] = [[/شیش/g, "شش"], [/پونزده/g, "پانزده"], [/شونزده/g, "شانزده"], [/پونصد/g, "پانصد"], [/هیجده/g, "هجده"]]
+const NUMBER_TOKEN = new RegExp(`^(${[...NUMBER_ROOTS].sort((a, b) => b.length - a.length).join("|")})+(م|مین|ام|ها)?$`)
+
+/** The number words of a text, joined, so «چهار دهم» and «چهاردهم» compare equal */
+export function numbersOf(text: string) {
+  return words(text)
+    .map((w) => COLLOQUIAL_NUMBERS.reduce((t, [re, to]) => t.replace(re, to), w === "یه" ? "یک" : w))
+    .flatMap((w) => { const parts = w.split(/(?<=.)و(?=.)/); return parts.length > 1 && parts.every((x) => NUMBER_TOKEN.test(x)) ? parts : [w] }) // «پنجاه‌وشش»
+    .filter((w, i, all) => w !== "و" && NUMBER_TOKEN.test(w) && (w !== "نه" || /^(دهم|صدم)$/.test(all[i + 1] ?? ""))) // «نه» is mostly "no", except in «نه دهم»
+    .map((w) => w.replace(/(ها)$/, "")) // plural only: an ordinal «م» changes meaning («بیست صد» 20/100 vs «بیست صدم» 0.20)
+    .map((w) => (w === "یکم" ? "یک" : w)) // «یکم» is colloquial «یه کم», a bit
+    .join("")
+    .replace(/یک(?=هزار|صد)/g, "") // «یک هزار» = «هزار»
+    .replace(/یک/g, "") // «یه/یک» is an article far more often than a number; never decisive on its own
+}
+
+const skel = (w: string) => w.replace(/[اویهءئ]/g, "").replace(/(.)\1+/g, "$1")
+function editDistance(a: string, b: string) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
+  for (let j = 1; j <= b.length; j++) d[0][j] = j
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+  return d[a.length][b.length]
+}
+
+/** Content words of the script (3+ consonants) that the listener did not say, allowing one-letter
+ * colloquial variants («می‌کنید/می‌کنین») and words heard joined or split («پچ کردن/پچ‌کردن») */
+export function missingWords(intended: string, heard: string) {
+  const a = words(intended).map(skel), b = words(heard).map(skel)
+  const same = (x: string, y: string) => x === y || (Math.min(x.length, y.length) >= 4 && editDistance(x, y) <= 1)
+  const t = Array.from({ length: a.length + 1 }, () => new Uint16Array(b.length + 1))
+  for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) t[i][j] = same(a[i], b[j]) ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1])
+  const unmatched: string[] = []
+  const orig = words(intended)
+  let i = 0, j = 0
+  while (i < a.length) {
+    if (j < b.length && same(a[i], b[j])) { i++, j++; continue }
+    if (j < b.length && t[i][j + 1] >= t[i + 1][j]) { j++; continue }
+    unmatched.push(orig[i]); i++
+  }
+  const heardSkel = skel(words(heard).join(""))
+  return unmatched.filter((w) => skel(w).length >= 3 && !heardSkel.includes(skel(w)))
+}
+
 // ---------------------------------------------------------------- pitch
 
 /** Median F0 of voiced frames (autocorrelation on a 8 kHz copy) */
@@ -158,6 +209,9 @@ export function compareText(intended: string, heard: string) {
   if (chars.longest >= 4) why.push(`run of ${chars.longest} consonants differs`)
   if (diff > Math.max(3, a.length * 0.12)) why.push(`${diff} of ${a.length} consonants differ`)
   if (!endsRight(intended, heard)) why.push("last word missing or cut")
+  if (numbersOf(intended) !== numbersOf(heard)) why.push(`numbers differ: «${numbersOf(intended)}» vs «${numbersOf(heard)}»`)
+  const gone = missingWords(intended, heard)
+  if (gone.length) why.push(`word(s) not heard: ${gone.join("، ")}`)
   return { missing: wordDiff.missing, extra: wordDiff.extra, skeletonDiff: diff, longestRun: chars.longest, why }
 }
 

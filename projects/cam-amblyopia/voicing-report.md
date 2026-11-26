@@ -1,6 +1,6 @@
 # cam
 
-- Length **22:29** · 148 turns · 2912 words · 129 words/min
+- Length **22:28** · 148 turns · 2915 words · 130 words/min
 - Voices: Sara = Sulafat, Kaveh = Orus · gemini-3.8-flash-tts, one call per turn · checked blind by gemini-4-argon + pitch
 - Turns passing: **148/148**
 
@@ -10,9 +10,9 @@
 - 1:12 بخش یک — داستان دستگاه کم
 - 3:52 بخش دو — دستگاه خودتونو بشناسید
 - 6:49 بخش سه — قبل از اینکه دستگاهو روشن کنیم
-- 8:45 بخش چهار — یه جلسه‌ی کم، قدم به قدم
-- 10:35 بخش پنج — دوز، و جای کم کنار پچ و آتروپین
-- 12:29 بخش شیش — اندازه‌گیری درست، و پیگیری
+- 8:46 بخش چهار — یه جلسه‌ی کم، قدم به قدم
+- 10:36 بخش پنج — دوز، و جای کم کنار پچ و آتروپین
+- 12:28 بخش شیش — اندازه‌گیری درست، و پیگیری
 - 14:02 بخش هفت — کم برای کی؟ و برای کی نه؟
 - 16:47 بخش هشت — شواهد جدید، از تهران تا تایوان
 - 19:09 بخش نه — حرف‌زدن با خانواده، و اخلاق حرفه‌ای
@@ -75,56 +75,56 @@ Verdict compares a blind transcription with the script on a consonant skeleton (
 | 49 | 7:18 | Kaveh | 6.5s | 1 | ok | 10 | 143 |  |
 | 50 | 7:25 | Sara | 13.5s | 1 | ok | 9 | 205 |  |
 | 51 | 7:39 | Kaveh | 9.9s | 1 | ok | 10 | 143 |  |
-| 52 | 7:49 | Sara | 13.7s | 1 | ok | 9 | 205 | mispronunciation of 'آمبلیوپی' as 'آمبلوپی' (missing the 'ی' sound) |
-| 53 | 8:03 | Kaveh | 6.5s | 1 | ok | 10 | 145 |  |
+| 52 | 7:49 | Sara | 14.0s | 5 | ok | 0 | 200 | adopted 052-3ae5340f3a-t2.wav after a targeted listen |
+| 53 | 8:04 | Kaveh | 6.5s | 1 | ok | 10 | 145 |  |
 | 54 | 8:10 | Sara | 5.6s | 1 | ok | 10 | 242 |  |
 | 55 | 8:16 | Kaveh | 9.2s | 1 | ok | 10 | 148 |  |
 | 56 | 8:26 | Sara | 8.6s | 1 | ok | 10 | 229 |  |
 | 57 | 8:35 | Kaveh | 10.1s | 1 | ok | 9 | 148 | The English term "crowded" is pronounced as "کرودد" (/kroded/) instead of the standard "کراودد" (/krawded/), though this is a common pronunciation among Iranian clinicians |
-| 58 | 8:45 | Kaveh | 9.7s | 1 | ok | 10 | 140 |  |
-| 59 | 8:55 | Sara | 9.1s | 1 | ok | 9 | 195 |  |
+| 58 | 8:46 | Kaveh | 9.7s | 1 | ok | 10 | 140 |  |
+| 59 | 8:56 | Sara | 9.1s | 1 | ok | 9 | 195 |  |
 | 60 | 9:05 | Kaveh | 7.0s | 1 | ok | 9 | 140 |  |
-| 61 | 9:12 | Sara | 16.2s | 1 | ok | 9 | 195 |  |
+| 61 | 9:13 | Sara | 16.2s | 1 | ok | 9 | 195 |  |
 | 62 | 9:29 | Kaveh | 6.3s | 1 | ok | 10 | 140 |  |
 | 63 | 9:36 | Sara | 9.7s | 1 | ok | 9 | 186 |  |
 | 64 | 9:46 | Kaveh | 9.3s | 1 | ok | 10 | 151 |  |
-| 65 | 9:55 | Sara | 6.0s | 1 | ok | 10 | 186 |  |
+| 65 | 9:56 | Sara | 6.0s | 1 | ok | 10 | 186 |  |
 | 66 | 10:02 | Kaveh | 6.7s | 1 | ok | 10 | 157 |  |
 | 67 | 10:09 | Sara | 12.8s | 1 | ok | 10 | 190 |  |
 | 68 | 10:22 | Kaveh | 12.7s | 1 | ok | 9 | 143 |  |
-| 69 | 10:35 | Sara | 4.9s | 1 | ok | 10 | 216 |  |
-| 70 | 10:40 | Kaveh | 16.8s | 1 | ok | 10 | 127 |  |
+| 69 | 10:36 | Sara | 4.9s | 1 | ok | 10 | 216 |  |
+| 70 | 10:41 | Kaveh | 16.8s | 1 | ok | 10 | 127 |  |
 | 71 | 10:58 | Sara | 3.7s | 1 | ok | 9 | 186 |  |
 | 72 | 11:02 | Kaveh | 12.9s | 1 | ok | 10 | 133 |  |
 | 73 | 11:15 | Sara | 5.2s | 1 | ok | 10 | 205 |  |
-| 74 | 11:20 | Kaveh | 16.3s | 1 | ok | 9 | 167 | صدای ترکیدن دهان در ابتدای صحبت قبل از «آره» شنیده می‌شود. |
-| 75 | 11:37 | Sara | 12.0s | 1 | ok | 9 | 190 |  |
+| 74 | 11:21 | Kaveh | 16.1s | 1 | ok | 9 | 133 |  |
+| 75 | 11:37 | Sara | 11.3s | 1 | ok | 9 | 182 | mispronunciation of 'آمبلیوپی' with an inserted vowel after ب (pronounced 'آمبِلیوپی') |
 | 76 | 11:49 | Kaveh | 11.4s | 1 | ok | 9 | 160 |  |
 | 77 | 12:01 | Sara | 1.9s | 1 | ok | 9 | 190 |  |
-| 78 | 12:04 | Kaveh | 11.5s | 1 | ok | 9 | 138 | In the second sentence, 'فعالیت نزدیک' is pronounced without the ezafe (missing the -e sound at the end of 'فعالیت'), whereas in the previous sentence it was correctly pronounced with the ezafe. |
+| 78 | 12:03 | Kaveh | 11.5s | 1 | ok | 9 | 138 | In the second sentence, 'فعالیت نزدیک' is pronounced without the ezafe (missing the -e sound at the end of 'فعالیت'), whereas in the previous sentence it was correctly pronounced with the ezafe. |
 | 79 | 12:15 | Sara | 5.1s | 1 | ok | 10 | 235 |  |
-| 80 | 12:21 | Kaveh | 7.4s | 1 | ok | 9 | 125 |  |
-| 81 | 12:29 | Sara | 4.7s | 1 | ok | 10 | 186 |  |
-| 82 | 12:34 | Kaveh | 11.5s | 1 | ok | 9 | 143 |  |
-| 83 | 12:46 | Sara | 9.5s | 1 | ok | 10 | 186 |  |
-| 84 | 12:56 | Kaveh | 4.0s | 1 | ok | 10 | 140 |  |
-| 85 | 13:00 | Sara | 5.1s | 1 | ok | 7 | 216 | The English clinical term "گریدینگای" (gradings) is mispronounced with a 't' sound as "گریتینگای" (gratings). |
-| 86 | 13:06 | Kaveh | 3.8s | 1 | ok | 9 | 154 |  |
-| 87 | 13:10 | Sara | 15.3s | 1 | ok | 8 | 186 | Mispronunciation of آمبلیوپی as آمبلوپی (missing the ی sound)<br>English accent on the word گریتینگ |
+| 80 | 12:20 | Kaveh | 7.4s | 1 | ok | 9 | 125 |  |
+| 81 | 12:28 | Sara | 4.7s | 1 | ok | 10 | 186 |  |
+| 82 | 12:33 | Kaveh | 11.5s | 1 | ok | 9 | 143 |  |
+| 83 | 12:45 | Sara | 9.5s | 1 | ok | 10 | 186 |  |
+| 84 | 12:55 | Kaveh | 4.0s | 1 | ok | 10 | 140 |  |
+| 85 | 12:59 | Sara | 5.1s | 1 | ok | 7 | 216 | The English clinical term "گریدینگای" (gradings) is mispronounced with a 't' sound as "گریتینگای" (gratings). |
+| 86 | 13:05 | Kaveh | 3.8s | 1 | ok | 9 | 154 |  |
+| 87 | 13:09 | Sara | 15.3s | 1 | ok | 8 | 186 | Mispronunciation of آمبلیوپی as آمبلوپی (missing the ی sound)<br>English accent on the word گریتینگ |
 | 88 | 13:25 | Kaveh | 16.2s | 1 | ok | 10 | 138 |  |
-| 89 | 13:42 | Sara | 9.7s | 1 | ok | 9 | 200 |  |
-| 90 | 13:52 | Kaveh | 9.6s | 1 | ok | 10 | 154 |  |
+| 89 | 13:41 | Sara | 9.7s | 1 | ok | 9 | 200 |  |
+| 90 | 13:51 | Kaveh | 9.6s | 2 | ok | 0 | 154 | adopted 090-709da55319-t1.wav after a targeted listen |
 | 91 | 14:02 | Sara | 2.4s | 1 | ok | 3 | 216 | The word "کم" sounds like a cut-off word or a slip of the tongue, making the sentence grammatically incorrect and confusing. |
-| 92 | 14:05 | Kaveh | 12.3s | 1 | ok | 9 | 145 | بیست چهل تا بیست صد: برای بیان حدت بینایی (کسر ۲۰/۴۰ تا ۲۰/۱۰۰) در فارسی رایج بالینی «بیست چهلم تا بیست صدم» یا «بیست بر روی چهل» گفته می‌شود؛ خواندن آن به صورت دو عدد پشت سر هم غیرطبیعی و نادرست است. |
+| 92 | 14:04 | Kaveh | 12.8s | 1 | ok | 10 | 136 |  |
 | 93 | 14:18 | Sara | 8.1s | 1 | ok | 10 | 186 |  |
 | 94 | 14:26 | Kaveh | 2.0s | 1 | ok | 9 | 195 |  |
-| 95 | 14:29 | Sara | 14.4s | 1 | ok | 9 | 195 |  |
+| 95 | 14:28 | Sara | 14.4s | 1 | ok | 9 | 195 |  |
 | 96 | 14:43 | Kaveh | 3.3s | 1 | ok | 9 | 190 |  |
 | 97 | 14:47 | Sara | 16.8s | 1 | ok | 9 | 200 | Slight AI-like robotic prosody in listing terms and an audible intake of breath before 'درمان آمبلیوپی' |
 | 98 | 15:04 | Kaveh | 6.2s | 1 | ok | 9 | 140 |  |
 | 99 | 15:11 | Sara | 9.0s | 1 | ok | 10 | 200 |  |
 | 100 | 15:20 | Kaveh | 4.2s | 1 | ok | 9 | 143 |  |
-| 101 | 15:25 | Sara | 13.2s | 1 | ok | 10 | 222 |  |
+| 101 | 15:24 | Sara | 13.2s | 1 | ok | 10 | 222 |  |
 | 102 | 15:38 | Kaveh | 12.7s | 1 | ok | 9 | 154 |  |
 | 103 | 15:51 | Sara | 13.3s | 1 | ok | 9 | 186 |  |
 | 104 | 16:05 | Kaveh | 5.8s | 1 | ok | 9 | 170 |  |
@@ -140,8 +140,8 @@ Verdict compares a blind transcription with the script on a consonant skeleton (
 | 114 | 17:20 | Kaveh | 13.3s | 1 | ok | 9 | 157 | English acronym 'CAM' pronounced like the Persian word 'کم' (kam/little) instead of 'کم' with a front vowel or spelling it out, making 'با کم بیشتر بهتر شدن' sound confusing |
 | 115 | 17:33 | Sara | 5.6s | 1 | ok | 10 | 186 |  |
 | 116 | 17:39 | Kaveh | 11.8s | 1 | ok | 9 | 133 |  |
-| 117 | 17:52 | Sara | 4.6s | 1 | ok | 9 | 190 |  |
-| 118 | 17:57 | Kaveh | 10.6s | 1 | ok | 9 | 151 |  |
+| 117 | 17:51 | Sara | 4.6s | 1 | ok | 9 | 190 |  |
+| 118 | 17:56 | Kaveh | 10.6s | 1 | ok | 9 | 151 |  |
 | 119 | 18:07 | Sara | 14.4s | 1 | ok | 9 | 205 |  |
 | 120 | 18:22 | Kaveh | 3.7s | 1 | ok | 10 | 138 |  |
 | 121 | 18:26 | Sara | 1.6s | 1 | ok | 9 | 200 |  |
@@ -157,18 +157,18 @@ Verdict compares a blind transcription with the script on a consonant skeleton (
 | 131 | 19:52 | Sara | 3.1s | 1 | ok | 9 | 242 |  |
 | 132 | 19:56 | Kaveh | 4.4s | 2 | ok | 9 | 170 |  |
 | 133 | 20:00 | Sara | 15.7s | 1 | ok | 9 | 200 | "CAM" was read as the Persian word "کم" (kam) instead of the acronym C-A-M (سی‌ای‌ام), which sounds unnatural in clinical Persian. |
-| 134 | 20:17 | Kaveh | 4.2s | 1 | ok | 10 | 160 |  |
+| 134 | 20:16 | Kaveh | 4.2s | 1 | ok | 10 | 160 |  |
 | 135 | 20:21 | Sara | 5.2s | 1 | ok | 10 | 186 |  |
 | 136 | 20:27 | Kaveh | 3.8s | 3 | ok | 9 | 160 |  |
 | 137 | 20:31 | Sara | 16.8s | 1 | ok | 9 | 205 |  |
 | 138 | 20:48 | Kaveh | 16.5s | 1 | ok | 9 | 157 |  |
 | 139 | 21:05 | Sara | 4.6s | 1 | ok | 10 | 182 |  |
 | 140 | 21:10 | Kaveh | 14.7s | 1 | ok | 9 | 148 |  |
-| 141 | 21:25 | Sara | 10.9s | 1 | ok | 9 | 200 |  |
-| 142 | 21:36 | Kaveh | 14.5s | 1 | ok | 10 | 133 |  |
-| 143 | 21:51 | Sara | 13.8s | 1 | ok | 9 | 195 |  |
-| 144 | 22:05 | Kaveh | 4.8s | 1 | ok | 9 | 138 |  |
-| 145 | 22:10 | Sara | 9.8s | 1 | ok | 9 | 190 |  |
-| 146 | 22:21 | Kaveh | 3.7s | 1 | ok | 10 | 136 |  |
-| 147 | 22:25 | Sara | 3.0s | 1 | ok | 10 | 190 |  |
-| 148 | 22:28 | Kaveh | 1.1s | 1 | ok | 9 | 140 |  |
+| 141 | 21:25 | Sara | 9.8s | 1 | ok | 10 | 200 |  |
+| 142 | 21:35 | Kaveh | 14.5s | 1 | ok | 10 | 133 |  |
+| 143 | 21:50 | Sara | 13.8s | 1 | ok | 9 | 195 |  |
+| 144 | 22:04 | Kaveh | 4.8s | 1 | ok | 9 | 138 |  |
+| 145 | 22:09 | Sara | 9.8s | 1 | ok | 9 | 190 |  |
+| 146 | 22:19 | Kaveh | 3.7s | 1 | ok | 10 | 136 |  |
+| 147 | 22:24 | Sara | 3.0s | 1 | ok | 10 | 190 |  |
+| 148 | 22:27 | Kaveh | 1.1s | 1 | ok | 9 | 140 |  |

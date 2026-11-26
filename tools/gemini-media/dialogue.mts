@@ -85,7 +85,7 @@ interface Entry {
 
 // ---------------------------------------------------------------- script
 
-function loadLexicon(file?: string): [string, string][] {
+export function loadLexicon(file?: string): [string, string][] {
   if (!file) return []
   return readFileSync(file, "utf8")
     .split(/\r?\n/)
@@ -94,7 +94,7 @@ function loadLexicon(file?: string): [string, string][] {
     .filter((pair) => pair.length === 2 && pair[0])
 }
 
-function parseScript(file: string, lexicon: [string, string][], voices: Record<string, string>, keepTags = false) {
+export function parseScript(file: string, lexicon: [string, string][], voices: Record<string, string>, keepTags = false) {
   const turns: Turn[] = []
   let section = "Start"
   let sectionStart = true
